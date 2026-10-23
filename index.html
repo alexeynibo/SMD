@@ -1727,6 +1727,52 @@
     }
     .credit a { color: var(--icon-action); text-decoration: none; }
     .credit a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+    /* ---- Фон: фото станка ORBIMAC, интерфейс — ровно на его экране ----
+       Интерфейс не двигается и не масштабируется — подгоняется только фото.
+       Стекло на фото 1920 × 1080 чуть трапецией: по внешнему краю x 447…1472,
+       y 239…839, центр (960; 539,5) совпадает с центром интерфейса.
+       Фото уменьшено на 0.50 %, чтобы стекло целиком пряталось под интерфейсом
+       (на 1 px внутрь с каждой стороны) — без тёмных линий по краям. */
+    body { background: #0D141C; }
+    .device {
+      padding: 0;
+      background: none;
+      box-shadow: none;
+      border-radius: 0;
+    }
+    .device-photo {
+      position: absolute;
+      left: -443.21px;
+      top: -236.81px;
+      width: 1910.42px;
+      max-width: none;
+      height: auto;
+      pointer-events: none;
+      user-select: none;
+    }
+    .device > .screen {
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 0 0 3px #2E353C;               /* тонкая тёмно-серая обводка 3 px снаружи — размер интерфейса не меняется */
+    }
+    /* Панель и подпись поверх фото — на светлой подложке, чтобы читались */
+    /* Панель сверху — тёмная полупрозрачная, светлый текст */
+    .deck {
+      background: rgba(0, 0, 0, 0.6);
+      -webkit-backdrop-filter: blur(12px);
+              backdrop-filter: blur(12px);
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .deck .seg { background: rgba(255, 255, 255, 0.12); }
+    .deck .seg button { color: rgba(255, 255, 255, 0.85); }
+    .deck .seg button:hover { color: #FFFFFF; }
+    .deck .seg button.is-on { background: #FFFFFF; color: #303F4A; box-shadow: none; }
+    .deck .reset { background: rgba(255, 255, 255, 0.12); color: #FFFFFF; }
+    .deck .reset:hover { background: rgba(255, 255, 255, 0.2); }
+    .deck .hint { color: rgba(255, 255, 255, 0.45); }
+    /* Подпись снизу — без подложки, прямо на фото (там светлая рамка экрана) */
+    .credit { background: none; color: #4A5864; }
   </style>
 </head>
 <body>
@@ -1746,6 +1792,8 @@
   </div>
 
   <div class="device" id="device">
+    <!-- Фото станка: экран на фото совпадает с нашим экраном 1024 × 600 -->
+    <img class="device-photo" src="assets/machine-v2.webp" alt="" aria-hidden="true" draggable="false">
     <main class="screen" id="screen" data-weld="ready" data-screen="weld">
       <button class="back-button" id="back-button" type="button" aria-label="Назад">
         <!-- icons/back.svg, цвет обводки — из токена --icon-action (нажимаемая иконка) -->
