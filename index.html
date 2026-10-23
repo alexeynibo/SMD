@@ -1,0 +1,3433 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SMD Presale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Special+Gothic:wdth,wght@75..125,400..700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-bg: #EEF1F4;
+      --bezel: #1E2329;
+      --bezel-edge: #2C333B;
+      --screen-bg: #D9E3EB;
+      --screen-w: 1024px;
+      --screen-h: 600px;
+      --bezel-size: 16px;
+      --screen-radius: 4px;                       /* скругление экрана; рамка — на толщину больше */
+
+      /* Токены кнопок */
+      --button-radius: 20px;
+      --icon-color: #303F4A;            /* информационные иконки (нельзя нажать) */
+      --icon-action: #0070E3;           /* иконки, которые можно нажать */
+      --button-bg: #FFFFFF;
+      --button-bg-pressed: #C2CFDA;
+
+      /* Токены плашек */
+      --panel-radius: 20px;
+      --panel-bg: #FFFFFF;
+
+      /* Зелёная кнопка действия: градиент из макета */
+      /* Цвета из макета симулятора */
+      --muted: #A1ABB5;                /* подписи параметров (подобрано вручную) */
+      --chip: #E2EAEF;                 /* фон тегов и «таблеток» */
+      --blue: #007DDE;                 /* крестики в «таблетках» */
+      --line: #9CBACD;                 /* обводка кнопки «+1» */
+
+      --status-ok: #14C27A;            /* индикатор состояния: всё в порядке */
+
+      /* Зелёный кнопки «СТАРТ» — вокруг цвета индикатора #14C27A */
+      --action-green-from: #109B62;
+      --action-green-mid: #14C27A;
+      --action-green-to: #4DDB9C;
+      /* Основная надпись на больших кнопках («СТАРТ», «СТОП» и др.) — подобрано вручную */
+      --btn-size: 29px;
+      --btn-ls: 0.8px;
+      --btn-wght: 550;
+
+      /* Размер подписей: над цифрами в плашке и «Удерживайте 1 сек» на кнопке */
+      --label-size: 16px;
+
+      --action-hold-time: 1s;          /* сколько держать кнопку до срабатывания */
+      --action-fill: rgba(255, 255, 255, 0.3);   /* светлая полоса удержания */
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--page-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Корпус устройства */
+    .device {
+      padding: var(--bezel-size);
+      background: var(--bezel);
+      border-radius: calc(var(--screen-radius) + var(--bezel-size));   /* 20 px — рамка ровной толщины и на углах */
+      box-shadow:
+        inset 0 0 0 2px var(--bezel-edge),
+        0 24px 60px rgba(30, 35, 41, 0.18),
+        0 4px 12px rgba(30, 35, 41, 0.12);
+      transform-origin: center;
+      flex-shrink: 0;
+    }
+
+    /* Экран — ровно 1024 × 600 px */
+    .screen {
+      width: var(--screen-w);
+      height: var(--screen-h);
+      background: var(--screen-bg);
+      border-radius: var(--screen-radius);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Кнопка «Назад»: 80 × 80 px, 20 px от верхнего и левого края экрана */
+    .back-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 80px;
+      height: 80px;
+      border: none;
+      border-radius: var(--button-radius);
+      background: var(--button-bg);
+      color: var(--icon-action);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      /* Отпускание — плавное */
+      transition:
+        background-color 150ms ease-out,
+        transform 150ms ease-out;
+    }
+
+    /* Нажатое состояние: кнопка темнеет и чуть сжимается */
+    .back-button.is-pressed {
+      background: var(--button-bg-pressed);
+      transform: scale(0.96);
+      /* Нажатие — мгновенное */
+      transition-duration: 40ms;
+    }
+
+    .back-button svg {
+      display: block;
+      width: 40px;
+      height: 40px;
+    }
+
+    /* Кнопка настроек: такая же, как «Назад», но в правом верхнем углу
+       (20 px сверху и справа — по линии правого края плашки и кнопок) */
+    .settings-button {
+      left: auto;
+      right: 20px;
+    }
+    .settings-button svg {
+      width: 60px;
+      height: 60px;
+    }
+
+    /* Кнопка программы: между индикатором воды и шестерёнкой, промежутки по 16 px.
+       Левый край = индикатор воды (510) + 80 + 16 = 606 px, правый = 1024 − 20 − 80 − 16 = 908 px */
+    .program-button {
+      left: calc(100% - 20px - 587px - 3px + 80px + 16px + 80px + 16px);   /* 606 px */
+      width: calc(100% - 20px - 80px - 16px - (100% - 20px - 587px - 3px + 80px + 16px + 80px + 16px));   /* 302 px */
+      justify-content: flex-start;
+      gap: 10px;
+      padding: 0 16px 0 10px;
+      text-align: left;
+    }
+    .program-button svg {
+      width: 60px;
+      height: 60px;
+      flex: 0 0 60px;
+    }
+    .program-button .prog-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    /* Надпись кнопки программы — подобрано вручную */
+    .program-button {
+      --prog-size: 26px;
+      --prog-ls: 1.4px;
+      --prog-wdth: 94;
+      --prog-wght: 480;
+    }
+    .program-button .prog-name {
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: var(--prog-size);
+      font-weight: var(--prog-wght);
+      font-stretch: calc(var(--prog-wdth) * 1%);
+      font-variation-settings: "wdth" var(--prog-wdth), "wght" var(--prog-wght);
+      letter-spacing: var(--prog-ls);
+      line-height: 1.05;
+      color: var(--icon-color);
+      white-space: nowrap;
+    }
+    .program-button .prog-code { color: #7A8B98; }   /* «П31» — серым, светлее основного тёмного */
+    .program-button .prog-size {
+      font-family: "Inter", sans-serif;
+      font-size: var(--label-size);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* Индикаторы газа и воды — белые круги над плашкой.
+       80 px, 20 px сверху. До плашки ровно 16 px.
+       Левый край — на 3 px левее плашки: оптическая компенсация, иначе круг
+       рядом с прямым краем кажется сдвинутым вправо. */
+    .indicator {
+      position: absolute;
+      top: 20px;
+      left: calc(100% - 20px - 587px - 3px);   /* левый край плашки (417 px) − 3 px = 414 px */
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--panel-bg);
+      color: var(--icon-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .indicator svg {
+      display: block;
+      width: 60px;
+      height: 60px;
+    }
+
+    /* Индикатор воды — правее индикатора газа на 80 + 16 px (промежуток 16 px) */
+    .indicator--water {
+      left: calc(100% - 20px - 587px - 3px + 80px + 16px);   /* 510 px */
+    }
+
+    /* Точка состояния: круг 30 px в правом верхнем углу индикатора.
+       Центр — на краю белого круга под 45°: (40 + 28, 40 − 28) = (68, 12),
+       поэтому индикатор наполовину заходит на белый круг. */
+    .status-dot {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--status-ok);
+    }
+
+    /* Плашка процесса: 587 × 348 px, 116 px сверху, 20 px от правого края экрана.
+       Здесь будут информация о процессе и клавиши управления. */
+    .process-panel {
+      position: absolute;
+      top: 116px;
+      right: 20px;
+      width: 587px;
+      height: 348px;
+      border-radius: var(--panel-radius);
+      background: var(--panel-bg);
+      /* Отступы выверены по видимым краям букв, а не по рамкам строк:
+         края — 32 px, между группами — 33 px, подпись → цифра — 10 px */
+      padding: 24px 32px;            /* верх: до заглавных заголовка визуально 32 px */
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--icon-color);
+    }
+
+    /* Содержимое плашки — по макету симулятора */
+    .process-panel h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .process-panel h3 .sp { flex: 1 1 0%; }
+
+    .tag {
+      padding: 6px 12px;
+      border-radius: 999px;              /* полностью скруглённые края */
+      background: var(--chip);
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .tag--open {
+      background: #E0CCF8;
+      color: #6400DE;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      row-gap: 11px;                 /* цифры → подписи второго ряда: 23 px */
+      margin-top: 24px;              /* заголовок → первые подписи: 36 px */
+    }
+    .mode-grid label {
+      display: block;
+      margin-bottom: 4px;            /* подпись → цифра: визуально 15 px */
+      font-size: var(--label-size);
+      color: var(--muted);
+    }
+    /* Большие цифры — Special Gothic (подобрано вручную).
+       Объявлены на всей странице: ими пользуются плашка, показания и кнопка программы */
+    :root {
+      --num-size: 48px;
+      --num-ls: 0.8px;
+      --num-wdth: 94;
+      --num-wght: 480;
+      /* Единицы (Inter) — подобрано вручную */
+      --unit-size: 26px;
+      --unit-ls: -0.5px;
+      --unit-wght: 580;
+    }
+    .mode-grid .v {
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: var(--num-size);
+      font-weight: var(--num-wght);
+      font-stretch: calc(var(--num-wdth) * 1%);
+      font-variation-settings: "wdth" var(--num-wdth), "wght" var(--num-wght);
+      letter-spacing: var(--num-ls);
+      line-height: 1.05;
+    }
+    /* Единицы — Inter: в Special Gothic нет кириллицы */
+    .mode-grid .v small {
+      font-family: "Inter", sans-serif;
+      font-stretch: 100%;
+      font-variation-settings: "wght" var(--unit-wght);
+      font-size: var(--unit-size);
+      font-weight: var(--unit-wght);
+      letter-spacing: var(--unit-ls);
+    }
+
+    .pills {
+      position: absolute;
+      /* 29 px вместо 32: оптическая компенсация — скруглённый край «таблетки»
+         касается линии текста одной точкой и без сдвига кажется правее */
+      left: 29px;
+      right: 32px;
+      bottom: 29px;                  /* «таблетки» → низ: 32 px (круг «+1» на 3 px выше) */
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 56px;
+      /* Оптическая компенсация:
+         — справа 15 px: рисунок креста (со скруглёнными концами) начинается
+           в 5,5 px от края иконки, итого визуально 20,5 px — как у текста слева (20,8 px);
+         — снизу 1 px: содержимое поднято на 0,5 px — у строчных букв масса ниже
+           центра заглавных, без подъёма текст визуально «проседает». */
+      padding: 0 15px 1px 20px;
+      border-radius: 28px;
+      background: var(--chip);
+      font-size: 19px;
+      font-weight: 500;
+    }
+    /* Крестик без круга: иконка 24 px в натуральную величину, линии 3 px */
+    .pill .x {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--icon-action);
+      cursor: pointer;
+    }
+    .pill .x svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+    .more {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 62px;
+      height: 62px;
+      border: 2.5px solid var(--chip);   /* как фон «таблеток» */
+      border-radius: 50%;
+      background: none;
+      font: inherit;
+      font-size: 19px;
+      font-weight: 500;
+      color: var(--icon-action);
+      cursor: pointer;
+    }
+
+    /* ---- Плашка во время сварки и после — логика v2, оформление наше ---- */
+    /* Таймер сварки в заголовке */
+    .panel-timer {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--blue);
+      font-variant-numeric: tabular-nums;
+    }
+    /* Живые показания: 4 колонки */
+    .live-grid {
+      display: grid;
+      grid-template-columns: 140px 118px 140px 1fr;
+      margin-top: 24px;
+    }
+    .live-grid label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: var(--label-size);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .lv {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 34px;
+      font-weight: var(--num-wght);
+      font-stretch: calc(var(--num-wdth) * 1%);
+      font-variation-settings: "wdth" var(--num-wdth), "wght" var(--num-wght);
+      letter-spacing: var(--num-ls);
+      line-height: 1.05;
+      font-variant-numeric: tabular-nums;
+    }
+    .lv small {
+      font-family: "Inter", sans-serif;
+      font-stretch: 100%;
+      font-variation-settings: "wght" 500;
+      font-size: var(--label-size);
+      font-weight: 500;
+      letter-spacing: 0;
+      color: var(--muted);
+    }
+    .lv.stack { flex-direction: column; align-items: flex-start; gap: 0; }
+    /* Точка дуги: зелёная — дуга горит, жёлтая — прогрев/затухание, серая — нет дуги */
+    .arc-dot {
+      flex: 0 0 16px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--status-ok);
+    }
+    .arc-dot.off  { background: #C5D0D8; }
+    .arc-dot.warn { background: #F0A412; }
+    /* Вкладки коррекций */
+    .corr-tabs {
+      position: absolute;
+      left: 32px;
+      top: 196px;
+      width: 220px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .corr-tabs button {
+      height: 36px;
+      padding: 0 13px;
+      border: none;
+      border-radius: 18px;
+      background: var(--chip);
+      font: 500 15px/1 "Inter", sans-serif;
+      color: var(--icon-color);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .corr-tabs button.is-on { background: var(--blue); color: #FFFFFF; }
+    /* Регулятор коррекции «− значение +» */
+    .stepper {
+      position: absolute;
+      right: 32px;
+      top: 218px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stepper .pm {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      flex: 0 0 80px;
+      border: 2.5px solid var(--chip);
+      border-radius: 50%;
+      background: none;
+      color: var(--icon-action);
+      cursor: pointer;
+      transition: background-color 120ms;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .stepper .pm.is-held { background: var(--chip); }
+    .stepper .pm svg {
+      width: 32px;
+      height: 32px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .stepper .sv { width: 112px; text-align: center; }
+    .stepper .sv label {
+      display: block;
+      margin: 0 -40px 6px;
+      font-size: var(--label-size);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .stepper .sv .num { display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+    .stepper .sv b {
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 34px;
+      font-weight: var(--num-wght);
+      font-stretch: calc(var(--num-wdth) * 1%);
+      font-variation-settings: "wdth" var(--num-wdth), "wght" var(--num-wght);
+      letter-spacing: var(--num-ls);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .stepper .sv small { font-size: var(--label-size); font-weight: 500; color: var(--muted); }
+    .stepper .sv.is-changed b,
+    .stepper .sv.is-changed small { color: var(--blue); }
+    /* Итоги: только сетка параметров, ряды свободнее */
+    .process-panel.is-summary .mode-grid { margin-top: 36px; row-gap: 40px; }
+    .tag--ok  { background: #D6F5E6; color: #0E8F55; }
+    .tag--err { background: #FDE2E2; color: #C42222; }
+
+    /* Кнопка «+» у «таблеток»: значок плюса; без включённых функций — широкая «+ Функции» */
+    .more svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+    .more--wide {
+      width: auto;
+      height: 56px;
+      padding: 0 20px;
+      gap: 8px;
+      border-radius: 28px;
+    }
+
+    /* Лист «Функции» поверх экрана — логика v2, оформление наше */
+    .sheet-veil {
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(32, 44, 54, 0.45);
+      animation: veil-in 0.18s ease;
+    }
+    .sheet {
+      width: 880px;
+      padding: 24px;
+      border-radius: var(--panel-radius);
+      background: var(--screen-bg);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--icon-color);
+      animation: sheet-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .sheet h2 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 2px 4px 16px;
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .sheet h2 small {
+      display: block;
+      margin-top: 2px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    /* Функции — карточками 3 × 2: крупная цель для пальца */
+    .func-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .func-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 124px;
+      padding: 18px 18px 16px 20px;
+      border: none;
+      border-radius: var(--panel-radius);
+      background: #FFFFFF;
+      font: 500 18px/1.25 "Inter", sans-serif;
+      color: var(--icon-color);
+      text-align: left;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .func-card small { display: block; margin-top: 4px; font-size: 14px; font-weight: 400; color: var(--muted); }
+    .func-card .switch { flex: none; width: 70px; height: 40px; align-self: flex-start; }   /* по левому краю, как текст; размер не тянется */
+    /* Зелёная кнопка «Готово» внизу листа */
+    .sheet-done {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 72px;
+      margin-top: 20px;
+      overflow: hidden;
+      border: none;
+      border-radius: var(--panel-radius);
+      background: linear-gradient(15.3deg, var(--action-green-from) -24.1%, var(--action-green-mid) 46.7%, var(--action-green-to) 104.9%);
+      font: 600 24px/1 "Inter", sans-serif;
+      letter-spacing: var(--btn-ls);
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: filter 80ms ease-out;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .sheet-done.is-pressed { filter: brightness(0.9); }
+    /* Тумблер */
+    .switch {
+      position: relative;
+      flex: 0 0 70px;
+      width: 70px;
+      height: 40px;
+      border-radius: 20px;
+      background: var(--line);             /* подложка есть всегда — без мигания при переключении */
+    }
+    /* Зелёный градиент — отдельным слоем поверх подложки, плавно проявляется и гаснет */
+    .switch::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(15.3deg, var(--action-green-from) -24.1%, var(--action-green-mid) 46.7%, var(--action-green-to) 104.9%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .switch.is-on::before { opacity: 1; }
+    .switch::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s;
+    }
+    .switch.is-on::after { transform: translateX(30px); }
+    @keyframes veil-in  { from { opacity: 0; } }
+    @keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } }
+
+    /* Кнопка действия: ширина как у плашки (587 px), 16 px под плашкой,
+       20 px от правого и нижнего края экрана → высота 600 − 480 − 20 = 100 px.
+       Градиент — пересчёт ручек из Figma на размер 587 × 100. */
+    .action-button {
+      position: absolute;
+      top: 480px;
+      right: 20px;
+      width: 587px;
+      height: 100px;
+      border: none;
+      border-radius: var(--panel-radius);
+      background: linear-gradient(15.3deg, var(--action-green-from) -24.1%, var(--action-green-mid) 46.7%, var(--action-green-to) 104.9%);
+      cursor: pointer;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      /* Надпись — как в макете симулятора */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: var(--btn-size);
+      font-weight: var(--btn-wght);
+      font-variation-settings: "wght" var(--btn-wght);
+      letter-spacing: var(--btn-ls);
+      color: #FFFFFF;
+    }
+    .action-button > span:not(.action-button__fill):not(.ripple),
+    .action-button > small { position: relative; }   /* над полосой удержания */
+    .action-button small {
+      margin-top: 4px;
+      font-size: var(--label-size);   /* как подписи над цифрами в плашке */
+      font-weight: 500;
+      font-variation-settings: "wght" 500;
+      letter-spacing: 0;
+      opacity: 0.95;
+    }
+
+    /* Кнопки во время сварки: «СТОП» и «Плавная остановка», после —
+       «Вернуть горелку в ноль». Размеры и цвета — из макета симулятора. */
+    .weld-btn {
+      position: absolute;
+      top: 480px;
+      height: 100px;
+      border: none;
+      border-radius: var(--panel-radius);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: var(--btn-size);
+      font-weight: var(--btn-wght);
+      font-variation-settings: "wght" var(--btn-wght);
+      letter-spacing: var(--btn-ls);
+      color: #FFFFFF;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: opacity 200ms ease-out, filter 80ms ease-out;
+    }
+    .weld-btn.is-pressed { filter: brightness(0.9); }
+    .weld-btn { overflow: hidden; }
+
+    /* Волна от места касания на больших цветных кнопках:
+       круг на 25 % светлее кнопки вырастает до 360 px и растворяется за 0,5 с.
+       На «СТАРТ» волны нет — там полоса удержания. */
+    .ripple {
+      position: absolute;
+      width: 360px;
+      height: 360px;
+      margin: -180px 0 0 -180px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(0.04);
+      opacity: 1;
+      pointer-events: none;
+      animation: ripple 500ms ease-out forwards;
+    }
+    @keyframes ripple {
+      to { transform: scale(1); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ripple { transform: scale(1); animation-name: ripple-soft; }
+      @keyframes ripple-soft { from { opacity: 0.6; } to { opacity: 0; } }
+    }
+    .weld-btn--stop {
+      left: calc(100% - 20px - 587px);           /* 417 px — как у плашки */
+      width: 166px;
+      background: linear-gradient(115deg, #D92D2D 30%, #F05454);
+    }
+    .weld-btn--smooth {
+      left: calc(100% - 20px - 587px + 166px + 16px);   /* 599 px, промежуток 16 px */
+      width: 405px;
+      background: linear-gradient(100deg, #0759D8, #1290E0);
+    }
+    .weld-btn--return {
+      left: calc(100% - 20px - 587px);
+      width: 587px;
+      background: linear-gradient(100deg, #0759D8, #1290E0);
+    }
+    .weld-btn.is-dim { opacity: 0.5; pointer-events: none; }
+
+    /* Какие кнопки видны — по состоянию сварки на экране */
+    /* Этапы (data-weld), логика — по варианту v2 симулятора:
+       ready → prepurge → warm → welding → decay → postpurge → done | aborted → returning → ready */
+    .screen:not([data-weld="ready"]) .action-button { display: none; }
+    .screen[data-weld="prepurge"] .weld-btn--stop,  .screen[data-weld="prepurge"] .weld-btn--smooth,
+    .screen[data-weld="warm"] .weld-btn--stop,      .screen[data-weld="warm"] .weld-btn--smooth,
+    .screen[data-weld="welding"] .weld-btn--stop,   .screen[data-weld="welding"] .weld-btn--smooth,
+    .screen[data-weld="decay"] .weld-btn--stop,     .screen[data-weld="decay"] .weld-btn--smooth,
+    .screen[data-weld="postpurge"] .weld-btn--stop, .screen[data-weld="postpurge"] .weld-btn--smooth,
+    .screen[data-weld="halt"] .weld-btn--stop,      .screen[data-weld="halt"] .weld-btn--smooth,
+    .screen[data-weld="returning"] .weld-btn--return,
+    .screen[data-weld="aborted"] .weld-btn--return { display: flex; }
+    .done-button { display: none; transition: filter 80ms ease-out; }
+    .done-button.is-pressed { filter: brightness(0.9); }
+    .screen[data-weld="done"] .done-button { display: flex; }
+
+    /* Полоса удержания: заполняется слева направо, пока кнопку держат */
+    .action-button__fill {
+      position: absolute;
+      inset: 0;
+      background: var(--action-fill);
+      transform: scaleX(0);
+      transform-origin: left center;
+      /* Отпустили раньше времени — полоса быстро откатывается */
+      transition: transform 200ms ease-out, opacity 200ms ease-out;
+      pointer-events: none;
+    }
+
+    .action-button.is-holding .action-button__fill {
+      transform: scaleX(1);
+      transition: transform var(--action-hold-time) linear;
+    }
+
+    /* Сработала: полоса вспыхивает и плавно гаснет */
+    .action-button.is-done .action-button__fill {
+      transform: scaleX(1);
+      animation: action-done 600ms ease-out forwards;
+      transition: none;
+    }
+
+    @keyframes action-done {
+      0%   { opacity: 1; filter: brightness(1); }
+      25%  { opacity: 1; filter: brightness(1.6); }
+      100% { opacity: 0; filter: brightness(1); }
+    }
+
+    /* Статус под кругом — по макету симулятора: блок 378 × 64 на 500 px сверху,
+       центр по центру круга (32 + 175 = 207 px → левый край 207 − 189 = 18 px).
+       Вместо иконки — зелёная точка ожидания с расходящимся кольцом. */
+    .weld-status {
+      position: absolute;
+      top: 500px;
+      left: 18px;
+      width: 378px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--icon-color);
+    }
+    /* Индикатор ожидания: зелёная точка «онлайн» с расходящимся кольцом.
+       Место — по размеру точки (16 px), кольцо расходится за его пределы
+       (до 21 px от центра) и до текста (18 px) не достаёт. */
+    .idle-dot {
+      position: relative;
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      margin-right: 5px;                   /* до текста 18 + 5 = 23 px */
+    }
+    .idle-dot i,
+    .idle-dot b {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      border-radius: 50%;
+      background: var(--status-ok);
+    }
+    .idle-dot b { animation: idle-ping 2.4s ease-out infinite; }
+    @keyframes idle-ping {
+      0%   { transform: scale(1);   opacity: 0.55; }
+      100% { transform: scale(2.6); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .idle-dot b { display: none; }
+    }
+
+    /* Иконка статуса во время сварки — знак сварочной дуги: электрод, дуга,
+       брызги и шов. 48 px, линии 2,4 (4,8 px), скруглённые концы, один цвет.
+       Анимация: дуга и брызги плавно перетекают между 3 кадрами, по 0,15 с на кадр.
+       Линии нигде не касаются: минимальный зазор 1,6 px (электрод — дуга). */
+    .status-fire {
+      display: none;
+      width: 48px;
+      height: 48px;
+      flex: 0 0 48px;
+      margin-right: -5px;                  /* до текста 18 − 5 = 13 px */
+      fill: none;
+      stroke: #FC7B1A;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .status-fire g {
+      opacity: 0;
+      animation: arc-frame 0.45s linear infinite;
+    }
+    .status-fire g:nth-of-type(2) { animation-delay: 0.15s; }
+    .status-fire g:nth-of-type(3) { animation-delay: 0.3s; }
+    /* Кадр проявляется, держится и гаснет, перекрываясь с соседним — без рывков */
+    @keyframes arc-frame {
+      0%   { opacity: 0; }
+      12%  { opacity: 1; }
+      33%  { opacity: 1; }
+      45%  { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .status-fire g { animation: none; }
+      .status-fire g:first-of-type { opacity: 1; }
+    }
+    /* Остальные иконки статуса — в том же стиле, что иконка дуги:
+       48 px, линии 2,4, скруглённые концы, без анимации */
+    .status-icon {
+      display: none;
+      width: 48px;
+      height: 48px;
+      flex: 0 0 48px;
+      margin-right: -5px;
+      fill: none;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .status-icon--air  { stroke: var(--blue); }        /* продувка, возврат */
+
+    /* Продувка: полоски газа прорисовываются, держатся и стираются по очереди */
+    .status-icon--wind path {
+      stroke-dasharray: 1;
+      stroke-dashoffset: -1;
+      animation: wind-draw 1.6s ease-in-out infinite;
+    }
+    .status-icon--wind path:nth-of-type(2) { animation-delay: 0.1s; }
+    .status-icon--wind path:nth-of-type(3) { animation-delay: 0.2s; }
+    /* Прорисовка и стирание идут от прямого хвоста к завитку */
+    @keyframes wind-draw {
+      0%   { stroke-dashoffset: -1; }
+      25%  { stroke-dashoffset: 0; }    /* прорисовалась от хвоста к завитку */
+      70%  { stroke-dashoffset: 0; }    /* держится */
+      100% { stroke-dashoffset: 1; }    /* стёрлась от хвоста к завитку */
+    }
+
+    /* Возврат: при появлении один полный оборот в сторону стрелки (против часовой) */
+    .status-icon--ccw {
+      animation: ccw-turn 0.9s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+    @keyframes ccw-turn {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(-360deg); }
+    }
+
+    /* Шов завершён / остановка: залитый круг цвета иконки, внутри белый знак.
+       Круги одного размера (r 10), знаки одной толщины (2,4) */
+    .status-icon--ok circle  { fill: var(--status-ok); stroke: none; }
+    .status-icon--err circle { fill: #D92D2D; stroke: none; }
+    .status-icon--ok path,
+    .status-icon--err path   { stroke: #FFFFFF; }
+    /* Галочка при появлении прорисовывается один раз */
+    .status-icon--ok path {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      animation: check-draw 0.45s 0.15s ease-out both;
+    }
+    @keyframes check-draw { to { stroke-dashoffset: 0; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .status-icon--wind path,
+      .status-icon--ok path { animation: none; stroke-dashoffset: 0; }
+      .status-icon--ccw { animation: none; }
+    }
+
+    /* Какая иконка видна на каком этапе */
+    .screen:not([data-weld="ready"]) .idle-dot { display: none; }
+    .screen[data-weld="warm"] .status-fire,
+    .screen[data-weld="welding"] .status-fire,
+    .screen[data-weld="decay"] .status-fire { display: block; }
+    .screen[data-weld="prepurge"] .status-icon--wind,
+    .screen[data-weld="postpurge"] .status-icon--wind,
+    .screen[data-weld="returning"] .status-icon--ccw,
+    .screen[data-weld="done"] .status-icon--ok,
+    .screen[data-weld="aborted"] .status-icon--err,
+    .screen[data-weld="halt"] .status-icon--err { display: block; }
+    /* Текст всех статусов — одного цвета; цвет состояния — только на иконке и в круге */
+
+    /* Круг 350 px. Обводка 3 px снаружи — градиентное кольцо-подложка,
+       поэтому подложка сдвинута на 3 px от позиции круга (115 / 32). */
+    .circle-stroke {
+      position: absolute;
+      top: calc(115px - 3px);
+      left: calc(32px - 3px);
+      padding: 3px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #C5D0D9 0%, #D9E3EB 50%, #EBF1F7 100%);
+    }
+
+    .circle {
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      background: var(--screen-bg);
+      box-shadow:
+        /* тени лунки 115 % (подобрано вручную): светлее/темнее исходных #E9F0F6 / #B2BCC5 */
+        inset 0 -15px 35px #ECF2F7,
+        inset 0 15px 35px #A7B2BB;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Огненная дуга в лунке: рисуется видеокартой (WebGL) на canvas 350 × 350 px.
+       Лежит над рисками, под внутренним кругом. */
+    .gauge {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* Шкала: окружность 298 px (подобрано вручную), обводка 20 px по центру линии,
+       поэтому SVG занимает 298 + 20 = 318 px. Лежит над большим кругом,
+       под огненной дугой. */
+    .scale {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 318px;
+      height: 318px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    /* Внутренний круг 250 px. Обводка 3 px внутрь — градиентный контур
+       с отступом 3 px, внутри него заливка 244 px. */
+    .inner-circle {
+      width: 250px;
+      height: 250px;
+      padding: 3px;
+      border-radius: 50%;
+      background: linear-gradient(to top, #C5D0D9 0%, #D9E3EB 50%, #EBF1F7 100%);
+      position: relative;
+    }
+
+    /* Тени внутреннего круга — отдельным слоем под огнём,
+       чтобы светящаяся дуга не «тонула» в светлой тени */
+    .inner-circle-shadow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow:
+        /* тени малого круга 115 % (подобрано вручную) */
+        0 -15px 35px #ECF2F7,
+        0 15px 35px #A7B2BB;
+      pointer-events: none;
+    }
+
+    /* Верхний круг: копия внутреннего (250 px, та же заливка и обводка),
+       лежит над лавой и отбрасывает на неё одну тень из макета:
+       X 0, Y 15, размытие 14,3, растяжение −5, #000000 15 %. */
+    .top-inner-circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 250px;
+      height: 250px;
+      padding: 3px;                        /* обводка 3 px внутрь, как у внутреннего круга */
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(to top, #C5D0D9 0%, #D9E3EB 50%, #EBF1F7 100%);
+      box-shadow: 0 15px 14.3px -5px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Показания в центре круга: угол 0–360° и подпись под ним.
+       Цифра — шрифтом цифр плашки, подпись — как подписи над цифрами в плашке. */
+    .dial-readout {
+      /* подобрано вручную */
+      --dial-size: 76px;
+      --dial-ls: -1.1px;
+      --dial-wdth: 94;
+      --dial-wght: 480;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--icon-color);
+    }
+    .dial-deg {
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: var(--dial-size);
+      font-weight: var(--dial-wght);
+      font-stretch: calc(var(--dial-wdth) * 1%);
+      font-variation-settings: "wdth" var(--dial-wdth), "wght" var(--dial-wght);
+      letter-spacing: var(--dial-ls);
+      line-height: 1.05;
+      font-variant-numeric: tabular-nums;   /* цифры одной ширины — число не «прыгает» */
+      /* Оптическая компенсация: лёгкий значок градуса справа уводит цифры влево.
+         Сдвиг вправо на 0,13 em (≈ 10 px при 76 px) — около ¾ половины ширины значка */
+      transform: translateX(0.13em);
+    }
+    /* Вода на дне лунки (статус «Нет протока воды»): лежит там же, где лава, —
+       над ней и под внутренним кругом. Две волны бегут навстречу
+       и слегка покачиваются, как будто вода плещется */
+    .well-water {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      overflow: hidden;
+      pointer-events: none;
+      /* у стенки лунки вода мягко уходит в тень, как лава */
+      -webkit-mask-image: radial-gradient(circle closest-side, #000 calc(100% - 7px), transparent 100%);
+              mask-image: radial-gradient(circle closest-side, #000 calc(100% - 7px), transparent 100%);
+    }
+    .well-water__body {
+      position: absolute;
+      left: -20px;
+      right: -20px;
+      bottom: -4px;
+      height: 40px;
+      opacity: 0;
+      transform: translateY(16px);
+      transform-origin: 50% 100%;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .well-water svg {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 200%;
+      height: 100%;
+    }
+    .well-water__back  { fill: #6FB4F2; opacity: 0.35; animation: water-run 5.2s linear infinite reverse; }
+    .well-water__front { fill: #2D8DE8; opacity: 0.3; height: 82% !important; animation: water-run 3.6s linear infinite; }
+    .screen[data-alert="water"] .well-water__body {
+      opacity: 1;
+      transform: none;
+      animation: water-slosh 3.4s ease-in-out infinite;
+    }
+    @keyframes water-run { to { transform: translateX(-50%); } }
+    @keyframes water-slosh {
+      0%, 100% { transform: rotate(-2.5deg) translateY(1px); }
+      50%      { transform: rotate(2.5deg) translateY(-1px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .well-water svg, .screen[data-alert="water"] .well-water__body { animation: none; }
+    }
+    .dial-label {
+      margin-top: 4px;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: var(--label-size);
+      color: var(--muted);
+    }
+
+    .inner-circle-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: linear-gradient(to bottom right, #E6EDF2 0%, #D9E3EB 100%);
+    }
+
+
+
+
+
+
+
+
+
+
+    /* ================= НАВИГАЦИЯ И ЭКРАНЫ — логика варианта v2, оформление наше ================= */
+
+    /* Какие элементы видны на каком экране (data-screen на .screen) */
+    .screen:not([data-screen="weld"]) .process-panel,
+    .screen:not([data-screen="weld"]) .action-button,
+    .screen:not([data-screen="weld"]) .weld-btn,
+    .screen:not([data-screen="weld"]) .done-button,
+    .screen:not([data-screen="weld"]) .weld-status,
+    .screen:not([data-screen="weld"]) .circle-stroke { display: none !important; }
+    .screen[data-screen="manual"] .settings-button,
+    .screen[data-screen="programs"] .settings-button,
+    .screen[data-screen="programs"] .indicator,
+    .screen[data-screen="programs"] .program-button,
+    .screen[data-screen="editor"] .indicator,
+    .screen[data-screen="editor"] .program-button { display: none; }
+    .alt-screen { position: absolute; inset: 0; pointer-events: none; }
+    .alt-screen > * { pointer-events: auto; }
+    .screen-title {
+      position: absolute;
+      left: 124px;
+      top: 20px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      font: 600 26px/1 "Inter", sans-serif;
+      letter-spacing: -0.2px;
+      color: var(--icon-color);
+      white-space: nowrap;
+    }
+    .screen-title2 {
+      position: absolute;
+      left: 124px;
+      top: 20px;
+      height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      font-family: "Inter", sans-serif;
+      color: var(--icon-color);
+      white-space: nowrap;
+    }
+    .screen-title2 b { font-size: 26px; font-weight: 600; letter-spacing: -0.2px; line-height: 1.1; }
+    .screen-title2 small { margin-top: 4px; font-size: 14px; color: var(--muted); }
+
+    /* Шапка заблокирована во время сварки */
+    .screen.is-locked .back-button,
+    .screen.is-locked .program-button { background: #E8EEF2; pointer-events: none; }
+    .screen.is-locked .back-button > *,
+    .screen.is-locked .program-button > * { opacity: 0.45; }
+
+    /* Индикаторы газа и воды: нет давления/протока — красная мигающая точка; тест — пульс */
+    .indicator { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .status-dot.is-bad { background: #D92D2D; animation: dot-blink 1.8s ease-in-out infinite; }
+    .status-dot.is-busy { animation: dot-pulse 0.8s ease infinite; }
+    @keyframes dot-blink { 50% { opacity: 0.7; transform: scale(0.8); } }   /* медленный пульс: размер и немного прозрачность */
+    @keyframes dot-pulse { 50% { transform: scale(0.75); } }
+
+    /* «СТАРТ» недоступен: нет газа/воды или горелка не в нуле */
+    .action-button.is-disabled { background: #B9C6CF; cursor: not-allowed; }
+    .action-button.is-disabled .action-button__fill { display: none; }
+
+    /* Предупреждение «Горелка не в нуле»: оранжевый значок и кнопка «В ноль» */
+    .status-icon--warn circle { fill: #F08A12; stroke: none; }
+    .status-icon--warn path { stroke: #FFFFFF; }
+    .status-icon--err2 circle { fill: #D92D2D; stroke: none; }
+    .status-icon--err2 path { stroke: #FFFFFF; }
+    .screen[data-weld="ready"][data-alert] .idle-dot { display: none; }
+    .screen[data-weld="ready"][data-alert="torch"] .status-icon--warn,
+    .screen[data-weld="ready"][data-alert="gas"] .status-icon--err2,
+    .screen[data-weld="ready"][data-alert="water"] .status-icon--err2 { display: block; }
+    .status-link {
+      display: none;
+      height: 40px;
+      padding: 0 14px;
+      border: none;
+      border-radius: 999px;
+      background: #FFFFFF;
+      font: 600 16px/1 "Inter", sans-serif;
+      color: var(--icon-action);
+      cursor: pointer;
+    }
+    .screen[data-weld="ready"][data-alert="torch"] .status-link { display: inline-flex; align-items: center; }
+    .tag--closed { background: #D9EAF8; color: var(--blue); }
+
+    /* Плашка закрытой головки во время сварки: три показания слева, два регулятора справа */
+    .live-closed .lv-row { position: absolute; left: 32px; }
+    .live-closed label { display: block; margin-bottom: 6px; font-size: var(--label-size); color: var(--muted); }
+    .panel-error {
+      position: absolute;
+      left: 32px;
+      right: 32px;
+      bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font: 600 18px/1.2 "Inter", sans-serif;
+      color: var(--icon-color);
+    }
+    .panel-error svg { width: 32px; height: 32px; flex: 0 0 32px; }
+    .panel-error svg circle { fill: #D92D2D; }
+    .panel-error svg path { stroke: #FFFFFF; stroke-width: 2.4; stroke-linecap: round; fill: none; }
+
+    /* Общая круглая кнопка «− / +» (ручной режим) — как в регуляторе коррекций */
+    .pm-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      flex: 0 0 80px;
+      border: 2.5px solid var(--chip);
+      border-radius: 50%;
+      background: none;
+      color: var(--icon-action);
+      cursor: pointer;
+      transition: background-color 120ms;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .pm-btn.is-held { background: var(--chip); }
+    .pm-btn svg, .ui-icon {
+      width: 32px;
+      height: 32px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ---- Ручной режим ---- */
+    .mcard {
+      position: absolute;
+      padding: 22px 24px;
+      border-radius: var(--panel-radius);
+      background: #FFFFFF;
+      font-family: "Inter", sans-serif;
+      color: var(--icon-color);
+    }
+    .mcard h4 {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 19px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .mcard h4 span { font-size: 15px; font-weight: 500; color: var(--muted); }
+    .mcard .sub { margin-top: 4px; font-size: 15px; color: var(--muted); }
+    .mcard .row { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+    .mcard .val { width: 104px; flex: 0 0 auto; text-align: center; white-space: nowrap; }
+    .mcard .val b {
+      display: block;
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 34px;
+      font-weight: var(--num-wght);
+      font-stretch: calc(var(--num-wdth) * 1%);
+      font-variation-settings: "wdth" var(--num-wdth), "wght" var(--num-wght);
+      letter-spacing: var(--num-ls);
+      line-height: 1;
+    }
+    .mcard .val small { display: block; margin-top: 3px; font-size: 14px; font-weight: 500; color: var(--muted); }
+    .mcard .val.is-changed b, .mcard .val.is-changed small { color: var(--icon-action); }
+    .blue-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 72px;
+      margin-top: 22px;
+      border: none;
+      border-radius: var(--panel-radius);
+      background: linear-gradient(100deg, #0759D8, #1290E0);
+      font: 600 19px/1 "Inter", sans-serif;
+      color: #FFFFFF;
+      cursor: pointer;
+    }
+    .mtile-btn {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      border: none;
+      border-radius: var(--panel-radius);
+      background: #FFFFFF;
+      font: 600 18px/1.15 "Inter", sans-serif;
+      color: var(--icon-color);
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 120ms;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .mtile-btn svg { width: 34px; height: 34px; flex: 0 0 34px; fill: none; stroke: var(--icon-action); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .mtile-btn.is-on { background: var(--icon-action); color: #FFFFFF; }
+    .mtile-btn.is-on svg { stroke: #FFFFFF; }
+    .mtile-btn.is-held { background: var(--chip); }
+    .mtile-btn--col { flex-direction: column; justify-content: center; gap: 6px; padding: 0; font-size: 16px; text-align: center; }
+    .mtile-btn--col svg { width: 30px; height: 30px; flex-basis: 30px; }
+
+    /* ---- Место сохранения (программы) ---- */
+    .plist {
+      position: absolute;
+      left: 20px;
+      top: 116px;
+      width: 420px;
+      height: 464px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-bottom: 4px;
+    }
+    .pcard {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 76px;
+      flex: 0 0 auto;
+      padding: 12px 18px;
+      border: none;
+      border-radius: var(--panel-radius);
+      background: #FFFFFF;
+      box-shadow: inset 0 0 0 2.5px transparent;
+      font-family: "Inter", sans-serif;
+      color: var(--icon-color);
+      text-align: left;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pcard.is-sel { box-shadow: inset 0 0 0 2.5px var(--icon-action); }
+    .pcard .slot {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      border-radius: 12px;
+      background: var(--chip);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .pcard .nm { flex: 1 1 0%; min-width: 0; }
+    .pcard .nm b {
+      display: block;
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 22px;
+      font-weight: var(--prog-wght, 480);
+      font-stretch: 94%;
+      font-variation-settings: "wdth" 94, "wght" 480;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .pcard .nm b span { color: #7A8B98; }
+    .pcard .nm small { font-size: 14px; color: var(--muted); }
+    .pcard .loaded { padding: 4px 10px; border-radius: 999px; background: #E3F0FB; font-size: 13px; font-weight: 600; color: var(--icon-action); }
+    .pcard.is-empty { background: rgba(255, 255, 255, 0.5); color: #93A0AA; font-size: 18px; font-weight: 500; cursor: default; }
+    .pdet {
+      position: absolute;
+      left: 456px;
+      top: 116px;
+      width: 548px;
+      height: 464px;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 28px;
+      border-radius: var(--panel-radius);
+      background: #FFFFFF;
+      font-family: "Inter", sans-serif;
+      color: var(--icon-color);
+    }
+    .pdet h5 { display: flex; align-items: center; gap: 10px; }
+    .pdet h5 .pname {
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 30px;
+      font-weight: 480;
+      font-stretch: 94%;
+      font-variation-settings: "wdth" 94, "wght" 480;
+      letter-spacing: 1.4px;
+    }
+    .pdet h5 .pname span { color: #7A8B98; }
+    .pdet h5 .tag { margin-left: auto; }
+    .pdet .pinfo { margin-top: 6px; font-size: 15px; color: var(--muted); }
+    .pdet .pg { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 20px; margin-top: 24px; }
+    .pdet .pg label { display: block; font-size: var(--label-size); color: var(--muted); }
+    .pdet .pg b {
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 30px;
+      font-weight: var(--num-wght);
+      font-stretch: calc(var(--num-wdth) * 1%);
+      font-variation-settings: "wdth" var(--num-wdth), "wght" var(--num-wght);
+      letter-spacing: var(--num-ls);
+      white-space: nowrap;
+    }
+    .pdet .pg b small { font-family: "Inter", sans-serif; font-stretch: 100%; font-variation-settings: "wght" 500; font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+    .pdet .btns { display: flex; gap: 12px; margin-top: auto; }
+
+    /* Кнопки окон и экранов */
+    .bt {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      height: 72px;
+      overflow: hidden;
+      border: none;
+      border-radius: var(--panel-radius);
+      font: 600 19px/1 "Inter", sans-serif;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .bt--green { background: linear-gradient(15.3deg, var(--action-green-from) -24.1%, var(--action-green-mid) 46.7%, var(--action-green-to) 104.9%); color: #FFFFFF; }
+    .bt--blue { background: linear-gradient(100deg, #0759D8, #1290E0); color: #FFFFFF; }
+    .bt--ghost { background: var(--chip); color: var(--icon-color); }
+    .bt--line { background: #FFFFFF; box-shadow: inset 0 0 0 2.5px var(--chip); color: var(--icon-action); }
+    .bt.is-off { opacity: 0.45; pointer-events: none; }
+    .bt.is-pressed { filter: brightness(0.92); }
+
+    /* ---- Редактор программы ---- */
+    .settings-button.is-open { background: var(--icon-action); color: #FFFFFF; }
+    .settings-button.is-nudge { animation: nudge 0.5s ease; }
+    @keyframes nudge { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+    .edit-tip {
+      position: absolute;
+      right: 20px;
+      top: 112px;
+      z-index: 6;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--icon-color);
+      font: 500 15px/1.2 "Inter", sans-serif;
+      color: #FFFFFF;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    .edit-tip.is-shown { opacity: 1; transform: none; }
+    .ring-card {
+      position: absolute;
+      left: 20px;
+      top: 116px;
+      width: 312px;
+      height: 464px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-bottom: 10px;
+      border-radius: var(--panel-radius);
+      background: #FFFFFF;
+      font-family: "Inter", sans-serif;
+      color: var(--icon-color);
+    }
+    .ring-card svg text { font-family: "Inter", sans-serif; }
+    .ring-cap { margin-top: 8px; text-align: center; }
+    .ring-cap b { display: block; font-size: 19px; font-weight: 600; }
+    .ring-cap small { font-size: 15px; color: var(--muted); }
+    .etabs { position: absolute; left: 348px; top: 116px; display: flex; gap: 8px; }
+    .etabs button {
+      height: 44px;
+      padding: 0 20px;
+      border: none;
+      border-radius: 999px;
+      background: #FFFFFF;
+      font: 600 16px/1 "Inter", sans-serif;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .etabs button.is-on { background: var(--icon-action); color: #FFFFFF; }
+    .etbl {
+      position: absolute;
+      left: 348px;
+      top: 176px;
+      width: 656px;
+      height: 320px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: var(--panel-radius);
+      background: #FFFFFF;
+      font-family: "Inter", sans-serif;
+      color: var(--icon-color);
+    }
+    .etbl .thead, .etbl .tr { display: grid; align-items: center; }
+    .etbl .thead { flex: 0 0 auto; height: 44px; font-size: 14px; font-weight: 600; color: var(--muted); }
+    .etbl .thead button { height: 44px; border: none; background: none; font: 600 14px/1 "Inter", sans-serif; color: var(--muted); cursor: pointer; }
+    .etbl .thead button.is-sel { background: #EEF5FC; color: var(--icon-action); }
+    .etbl .tbody { flex: 1 1 0%; overflow: auto; }
+    .etbl .tr { min-height: 46px; }
+    .etbl .tr:nth-child(even) { background: #F7F9FB; }   /* зебра вместо тонких линий */
+    .etbl .lb { padding: 6px 10px 6px 20px; font-size: 15px; line-height: 1.2; }
+    .etbl .lb small { margin-left: 4px; font-size: 13px; color: var(--muted); }
+    .etbl .cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 46px;
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 20px;
+      font-weight: var(--num-wght);
+      font-stretch: calc(var(--num-wdth) * 1%);
+      font-variation-settings: "wdth" var(--num-wdth), "wght" var(--num-wght);
+      letter-spacing: 0.4px;
+    }
+    .etbl .cell.is-sel { background: #EEF5FC; }
+    .etbl .cell.span { justify-content: flex-start; gap: 12px; padding-left: 16px; }
+    .etbl .cell small { font-family: "Inter", sans-serif; font-stretch: 100%; font-variation-settings: "wght" 500; font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+    .etbl .cell.is-chg { color: var(--icon-action); }
+    .etbl .cell.is-chg::after { content: ""; position: absolute; right: 8px; top: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--icon-action); }
+    .etbl:not(.is-ro) .cell { cursor: pointer; }
+    .etbl .grp { padding: 14px 20px 6px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8A97A1; }
+    .etbl .grp.all { display: flex; align-items: center; gap: 8px; padding: 12px 20px 8px; background: #EEF3F7; color: #5F6E7A; }
+    .etbl .grp.all svg { width: 16px; height: 16px; fill: none; stroke: #7F8F9B; stroke-width: 2; stroke-linecap: round; }
+    .etbl .tr.com { background: #F4F7FA; }
+    .etbl .switch { flex: none; }
+    .enumsw { display: flex; padding: 3px; border-radius: 999px; background: var(--chip); font-family: "Inter", sans-serif; }
+    .enumsw span { padding: 6px 12px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--muted); font-stretch: 100%; font-variation-settings: normal; letter-spacing: 0; }
+    .enumsw span.is-on { background: #FFFFFF; color: var(--icon-color); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+    .efoot { position: absolute; top: 512px; height: 68px; }
+
+    /* ---- Окна: клавиатура, модель, выход без сохранения ---- */
+    .kp-disp { display: flex; align-items: center; justify-content: space-between; height: 84px; padding: 0 24px; border-radius: var(--panel-radius); background: #FFFFFF; }
+    .kp-disp b {
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 44px;
+      font-weight: var(--num-wght);
+      font-stretch: calc(var(--num-wdth) * 1%);
+      font-variation-settings: "wdth" var(--num-wdth), "wght" var(--num-wght);
+      letter-spacing: var(--num-ls);
+    }
+    .kp-disp b.is-err { color: #D92D2D; }
+    .kp-disp span { font-size: 19px; color: var(--muted); }
+    .kp-lim { display: flex; justify-content: space-between; margin: 8px 6px 12px; font-size: 15px; color: var(--muted); }
+    .kp-lim .e { font-weight: 600; color: #D92D2D; }
+    .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .keys button { height: 58px; border: none; border-radius: 16px; background: #FFFFFF; font: 600 22px/1 "Inter", sans-serif; color: var(--icon-color); cursor: pointer; }
+    .keys button.fn { background: var(--chip); font-size: 16px; }
+    .kp-act { display: flex; gap: 10px; margin-top: 12px; }
+    .kp-act .bt { flex: 1 1 0%; height: 64px; }
+    .mseg { display: flex; flex-wrap: wrap; gap: 8px; }
+    .mseg button { height: 48px; padding: 0 18px; border: none; border-radius: 999px; background: #FFFFFF; font: 600 17px/1 "Inter", sans-serif; color: var(--icon-color); cursor: pointer; }
+    .mseg button.is-on { background: var(--icon-action); color: #FFFFFF; }
+    .mtiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .mtile { padding: 14px 20px; border: none; border-radius: var(--panel-radius); background: #FFFFFF; text-align: left; cursor: pointer; font-family: "Inter", sans-serif; color: var(--icon-color); }
+    .mtile label { display: block; font-size: 14px; color: var(--muted); }
+    .mtile b {
+      font-family: "Special Gothic", "Inter", sans-serif;
+      font-size: 30px;
+      font-weight: var(--num-wght);
+      font-stretch: calc(var(--num-wdth) * 1%);
+      font-variation-settings: "wdth" var(--num-wdth), "wght" var(--num-wght);
+      letter-spacing: var(--num-ls);
+    }
+    .mtile b small { font-family: "Inter", sans-serif; font-size: 17px; font-weight: 500; color: var(--muted); font-stretch: 100%; font-variation-settings: normal; letter-spacing: 0; }
+    .mtile.is-chg b { color: var(--icon-action); }
+
+    /* ---- Режим ожидания ---- */
+    .standby {
+      position: absolute;
+      inset: 0;
+      z-index: 9;
+      background: radial-gradient(ellipse 520px 380px at 512px 250px, #EEF3F7 0, rgba(238, 243, 247, 0) 100%), var(--screen-bg);
+      cursor: pointer;
+      animation: veil-in 0.3s ease;
+    }
+    .sb-ring {
+      position: absolute;
+      left: 352px;
+      top: 70px;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: var(--screen-bg);
+      box-shadow: inset 0 -15px 35px #ECF2F7, inset 0 15px 35px #A7B2BB;
+    }
+    .sb-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 46px), #000 calc(100% - 45px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 46px), #000 calc(100% - 45px));
+    }
+    .sb-face {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 220px;
+      height: 220px;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 50%;
+      background: linear-gradient(to bottom right, #E6EDF2 0%, #D9E3EB 100%);
+      box-shadow: 0 15px 14.3px -5px rgba(0, 0, 0, 0.15);
+      font: 500 15px/1 "Inter", sans-serif;
+      color: var(--muted);
+    }
+    .sb-face svg { width: 58px; height: 58px; fill: none; stroke: #8FA0AD; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .sb-txt { position: absolute; left: 0; right: 0; top: 448px; text-align: center; font-family: "Inter", sans-serif; }
+    .sb-txt b { display: block; font-size: 26px; font-weight: 600; letter-spacing: -0.2px; color: var(--icon-color); }
+    .sb-txt span { display: block; margin-top: 6px; font-size: 15px; color: var(--muted); }
+
+    /* ---- Подсказки под устройством ---- */
+    .device { position: relative; top: 10px; }   /* чуть ниже центра — визуально ровнее между панелью и подписью */
+    .caption {
+      position: fixed;
+      z-index: 30;
+      left: 50%;
+      bottom: 44px;                                 /* над подписью «Разработка — Атвинта» */
+      max-width: 900px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      border-radius: 12px;
+      background: #303F4A;
+      font: 500 15px/1.35 "Inter", sans-serif;
+      color: #FFFFFF;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translate(-50%, -4px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    .caption.is-shown { opacity: 1; transform: translate(-50%, 0); }
+    .caption svg { width: 20px; height: 20px; flex: 0 0 20px; fill: none; stroke: #8EC5FF; stroke-width: 2; stroke-linecap: round; }
+
+    /* ---- Панель презентера над устройством (как в v2, без «Вариант 2») ---- */
+    .deck {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 6px 18px;
+      padding: 6px 16px;
+      font: 500 12px/1 "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #7A8B98;
+      white-space: nowrap;
+      transition: opacity 0.25s;
+    }
+    .deck.is-hidden { opacity: 0; pointer-events: none; }
+    .deck .grp { display: flex; align-items: center; gap: 6px; }
+    .deck .seg { display: flex; padding: 2px; border-radius: 8px; background: #E2E8ED; }
+    .deck .seg button { padding: 5px 9px; border: none; border-radius: 6px; background: none; font: inherit; color: #5F6E7A; cursor: pointer; }
+    .deck .seg button.is-on { background: #FFFFFF; color: #303F4A; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+    .deck .reset { padding: 6px 10px; border: none; border-radius: 8px; background: #E2E8ED; font: inherit; color: #303F4A; cursor: pointer; }
+    .deck .hint { color: #A1ABB5; }
+
+    /* ---- Подпись под устройством ---- */
+    .credit {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 20;
+      padding: 8px 16px 10px;
+      text-align: center;
+      font: 500 13px/1.2 "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #7A8B98;
+    }
+    .credit a { color: var(--icon-action); text-decoration: none; }
+    .credit a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <!-- Панель презентера (из варианта v2, без «Вариант 2»). Клавиша H — скрыть -->
+  <div class="deck" id="deck">
+    <div class="grp"><span class="lbl">Головка</span>
+      <div class="seg" id="seg-head"><button type="button" data-head="open" class="is-on">Открытая</button><button type="button" data-head="closed">Закрытая</button></div>
+    </div>
+    <div class="grp"><span class="lbl">Скорость демо</span>
+      <div class="seg" id="seg-speed"><button type="button" data-speed="1">×1</button><button type="button" data-speed="10" class="is-on">×10</button><button type="button" data-speed="30">×30</button></div>
+    </div>
+    <div class="grp"><span class="lbl">Сценарий</span>
+      <div class="seg" id="seg-scn"><button type="button" data-scn="ok" class="is-on">Норма</button><button type="button" data-scn="gas">Нет газа</button><button type="button" data-scn="water">Нет воды</button></div>
+    </div>
+    <button type="button" class="reset" id="deck-reset">Сброс</button>
+    <span class="hint">H — скрыть панель</span>
+  </div>
+
+  <div class="device" id="device">
+    <main class="screen" id="screen" data-weld="ready" data-screen="weld">
+      <button class="back-button" id="back-button" type="button" aria-label="Назад">
+        <!-- icons/back.svg, цвет обводки — из токена --icon-action (нажимаемая иконка) -->
+        <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <path d="M25 6.66667L11.6667 20L25 33.3333" stroke="currentColor"
+                stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <button class="back-button settings-button" id="settings-button" type="button" aria-label="Ручной режим">
+        <!-- icons/settings.svg, цвет обводки — из токена --icon-action (нажимаемая иконка) -->
+        <svg viewBox="0 0 60 60" fill="none" aria-hidden="true">
+          <path stroke="currentColor" stroke-width="3" d="M33 15.115C33 13.9467 32.0533 13 30.885 13H28.45C27.28 13 26.3333 13.9467 26.3333 15.115C26.3333 16.0783 25.6733 16.905 24.775 17.2583C24.6328 17.3161 24.4922 17.375 24.3533 17.435C23.4683 17.8183 22.4167 17.7017 21.7333 17.02C21.3365 16.6241 20.7989 16.4017 20.2383 16.4017C19.6778 16.4017 19.1401 16.6241 18.7433 17.02L17.02 18.7433C16.6241 19.1401 16.4017 19.6778 16.4017 20.2383C16.4017 20.7989 16.6241 21.3365 17.02 21.7333C17.7033 22.4167 17.82 23.4667 17.4333 24.3533C17.3726 24.4929 17.3143 24.6335 17.2583 24.775C16.905 25.6733 16.0783 26.3333 15.115 26.3333C13.9467 26.3333 13 27.28 13 28.4483V30.885C13 32.0533 13.9467 33 15.115 33C16.0783 33 16.905 33.66 17.2583 34.5583C17.3161 34.7006 17.3744 34.8411 17.4333 34.98C17.8183 35.865 17.7017 36.9167 17.02 37.6C16.6241 37.9968 16.4017 38.5345 16.4017 39.095C16.4017 39.6555 16.6241 40.1932 17.02 40.59L18.7433 42.3133C19.1401 42.7092 19.6778 42.9316 20.2383 42.9316C20.7989 42.9316 21.3365 42.7092 21.7333 42.3133C22.4167 41.63 23.4667 41.5133 24.3533 41.8983C24.4922 41.9594 24.6328 42.0183 24.775 42.075C25.6733 42.4283 26.3333 43.255 26.3333 44.2183C26.3333 45.3867 27.28 46.3333 28.4483 46.3333H30.885C32.0533 46.3333 33 45.3867 33 44.2183C33 43.255 33.66 42.4283 34.5583 42.0733C34.7006 42.0178 34.8411 41.96 34.98 41.9C35.865 41.5133 36.9167 41.6317 37.5983 42.3133C37.9952 42.7097 38.5332 42.9324 39.0942 42.9324C39.6551 42.9324 40.1931 42.7097 40.59 42.3133L42.3133 40.59C42.7092 40.1932 42.9316 39.6555 42.9316 39.095C42.9316 38.5345 42.7092 37.9968 42.3133 37.6C41.63 36.9167 41.5133 35.8667 41.8983 34.98C41.9594 34.8411 42.0183 34.7006 42.075 34.5583C42.4283 33.66 43.255 33 44.2183 33C45.3867 33 46.3333 32.0533 46.3333 30.885V28.45C46.3333 27.2817 45.3867 26.335 44.2183 26.335C43.255 26.335 42.4283 25.675 42.0733 24.7767C42.0174 24.6351 41.9591 24.4945 41.8983 24.355C41.515 23.47 41.6317 22.4183 42.3133 21.735C42.7092 21.3382 42.9316 20.8005 42.9316 20.24C42.9316 19.6795 42.7092 19.1418 42.3133 18.745L40.59 17.0217C40.1932 16.6258 39.6555 16.4034 39.095 16.4034C38.5345 16.4034 37.9968 16.6258 37.6 17.0217C36.9167 17.705 35.8667 17.8217 34.98 17.4367C34.8405 17.3754 34.6999 17.3165 34.5583 17.26C33.66 16.905 33 16.0767 33 15.115Z"/>
+          <path stroke="currentColor" stroke-width="3" d="M36.6668 30C36.6668 31.7681 35.9645 33.4638 34.7142 34.714C33.464 35.9643 31.7683 36.6667 30.0002 36.6667C28.2321 36.6667 26.5364 35.9643 25.2861 34.714C24.0359 33.4638 23.3335 31.7681 23.3335 30C23.3335 28.2319 24.0359 26.5362 25.2861 25.2859C26.5364 24.0357 28.2321 23.3333 30.0002 23.3333C31.7683 23.3333 33.464 24.0357 34.7142 25.2859C35.9645 26.5362 36.6668 28.2319 36.6668 30Z"/>
+        </svg>
+      </button>
+
+      <button class="back-button program-button" id="program-button" type="button" aria-label="Программа П31 ORO-130">
+        <!-- icons/program.svg, цвет обводки — из токена --icon-action (нажимаемая иконка) -->
+        <svg viewBox="0 0 60 60" fill="none" aria-hidden="true">
+          <path stroke="currentColor" stroke-width="2.8125" stroke-linecap="round" stroke-linejoin="round" d="M35.375 31.5868V36.7056C35.375 40.9806 33.6687 42.6868 29.3937 42.6868H24.2937C20.0375 42.6868 18.3125 40.9806 18.3125 36.7056V31.5868C18.3125 27.3306 20.0188 25.6243 24.2937 25.6243H29.4125C33.6687 25.6243 35.375 27.3306 35.375 31.5868Z"/>
+          <path stroke="currentColor" stroke-width="2.8125" stroke-linecap="round" stroke-linejoin="round" d="M49.2505 36.125C49.2505 43.3813 43.3817 49.25 36.1255 49.25L38.0942 45.9688M11.7505 24.875C11.7505 17.6188 17.6192 11.75 24.8755 11.75L22.9067 15.0312M42.688 24.275V29.3937C42.688 33.6687 40.9817 35.375 36.7067 35.375H35.3755V31.5875C35.3755 27.3313 33.6692 25.625 29.3942 25.625H25.6255V24.275C25.6255 20 27.3317 18.3125 31.6067 18.3125H36.7255C40.9817 18.3125 42.688 20.0187 42.688 24.275Z"/>
+        </svg>
+        <span class="prog-text">
+          <span class="prog-name"><span class="prog-code">П31</span> ORO-130</span>
+          <span class="prog-size">⌀&#8239;108.0&#8239;×&#8239;6.0&nbsp;мм</span>
+        </span>
+      </button>
+
+      <!-- Индикатор газа -->
+      <div class="indicator indicator--gas" id="gas-indicator" aria-label="Газ">
+        <!-- icons/gas.svg, цвет — из токена --icon-color -->
+        <svg viewBox="0 0 60 60" fill="none" aria-hidden="true">
+          <path d="M30 14.5H29.5C26.1863 14.5 23.5 17.1863 23.5 20.5V27.5M30 14.5H30.5C33.8137 14.5 36.5 17.1863 36.5 20.5V27.5M30 14.5V8.5M30 8.5H32.5M30 8.5H27.5M23.5 27.5V45.5C23.5 46.6046 24.3954 47.5 25.5 47.5H34.5C35.6046 47.5 36.5 46.6046 36.5 45.5V27.5M23.5 27.5H36.5"
+                stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span class="status-dot" id="gas-status" role="status" aria-label="Газ: норма"></span>
+      </div>
+      <!-- Индикатор воды -->
+      <div class="indicator indicator--water" id="water-indicator" aria-label="Вода">
+        <!-- icons/water.svg, цвет — из токена --icon-color -->
+        <svg viewBox="0 0 60 60" fill="none" aria-hidden="true">
+          <path d="M29.9998 46.6667C26.4636 46.6667 23.0722 45.2619 20.5717 42.7614C18.0713 40.2609 16.6665 36.8696 16.6665 33.3333C16.6665 27.4967 21.1832 22.8283 25.1548 18.55L29.9998 13.3333L34.8448 18.55C38.8165 22.83 43.3332 27.4983 43.3332 33.3333C43.3332 36.8696 41.9284 40.2609 39.4279 42.7614C36.9274 45.2619 33.5361 46.6667 29.9998 46.6667Z"
+                stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="status-dot" id="water-status" role="status" aria-label="Вода: норма"></span>
+      </div>
+      <!-- Плашка: содержимое меняется по этапам (логика варианта v2) и рисуется скриптом -->
+      <section class="process-panel" id="process-panel" aria-label="Режим сварки"></section>
+      <button class="action-button" id="action-button" type="button">
+        <span class="action-button__fill" aria-hidden="true"></span>
+        <span>СТАРТ</span>
+        <small>Удерживайте 1&nbsp;сек</small>
+      </button>
+      <button class="weld-btn weld-btn--stop" id="stop-button" type="button">СТОП</button>
+      <button class="weld-btn weld-btn--smooth" id="smooth-button" type="button">Плавная остановка</button>
+      <button class="weld-btn weld-btn--return" id="return-button" type="button">Вернуть горелку в&nbsp;ноль</button>
+      <button class="action-button done-button" id="done-button" type="button">
+        <span>ГОТОВО</span>
+        <small>К&nbsp;следующему шву</small>
+      </button>
+
+      <div class="weld-status" id="weld-status" role="status">
+        <span class="idle-dot" aria-hidden="true"><b></b><i></i></span>
+        <svg class="status-fire" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2.5V5.8"/>          <!-- электрод -->
+          <path d="M4 20.5H20"/>           <!-- шов -->
+          <g><path d="M12 9L10 11.2L13 13L11 15.5"/><path d="M7.5 16.5L5.5 15.5M16.5 16.5L18.5 15.5"/></g>
+          <g><path d="M12 9L14 11L11 13L13 15.5"/><path d="M7 17L4.5 16.8M17 17L19.5 16.8"/></g>
+          <g><path d="M12 9L10.5 11.6L13 13.3L11.5 15.5"/><path d="M7.5 16L6 14.5M16.5 16L18 14.5"/></g>
+        </svg>
+        <svg class="status-icon status-icon--air status-icon--wind" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path pathLength="1" d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path pathLength="1" d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg>
+        <svg class="status-icon status-icon--air status-icon--ccw" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <svg class="status-icon status-icon--ok" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path pathLength="1" d="M7.5 12.5l3 3 6-6.5"/></svg>
+        <svg class="status-icon status-icon--err" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.3"/></svg>
+        <svg class="status-icon status-icon--err2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.3"/></svg>
+        <svg class="status-icon status-icon--warn" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.3"/></svg>
+        <span id="weld-status-text">Готов к&nbsp;работе</span>
+        <button class="status-link" id="status-zero" type="button">В&nbsp;ноль</button>
+      </div>
+
+      <div class="circle-stroke">
+        <div class="circle" id="circle">
+          <div class="inner-circle-shadow" aria-hidden="true"></div>
+          <!-- 120 делений, по одному на 3°: длина пути задана равной 930 (шаг 7,75).
+               Реальная длина окружности 2π × 149 ≈ 936 px, поэтому риска 2 px = 1,9868 единицы.
+               Сдвиг на полриски — центр каждой риски точно на 0°, 3°, 6°… -->
+          <svg class="scale" id="scale" viewBox="0 0 318 318" aria-hidden="true">
+            <!-- 120 рисок по 2 px: шаг 930 / 120 = 7,75 единицы пути; 2 px = 1.9868 единицы при диаметре 298 -->
+            <circle class="scale-ticks" cx="159" cy="159" r="149" fill="none"
+                    stroke="#33414B" stroke-opacity="0.2" stroke-width="20"
+                    stroke-dasharray="1.9868 5.7632" stroke-dashoffset="0.9934" pathLength="930"/>
+            <!-- Главные риски на 0°, 90°, 180° и 270° — темнее (каждая 30-я, шаг 232,5) -->
+            <circle class="scale-major" cx="159" cy="159" r="149" fill="none"
+                    stroke="#33414B" stroke-opacity="0.45" stroke-width="20"
+                    stroke-dasharray="1.9868 230.5132" stroke-dashoffset="0.9934" pathLength="930"/>
+          </svg>
+          <canvas class="gauge" id="gauge" aria-hidden="true"></canvas>
+          <!-- Нет протока воды: на дне лунки плещется немного воды -->
+          <div class="well-water" aria-hidden="true">
+            <div class="well-water__body">
+              <svg class="well-water__back" viewBox="0 0 488 40" preserveAspectRatio="none"><path d="M0 10Q30.5 2 61 10T122 10T183 10T244 10T305 10T366 10T427 10T488 10V40H0Z"/></svg>
+              <svg class="well-water__front" viewBox="0 0 488 40" preserveAspectRatio="none"><path d="M0 10Q30.5 2 61 10T122 10T183 10T244 10T305 10T366 10T427 10T488 10V40H0Z"/></svg>
+            </div>
+          </div>
+          <div class="inner-circle" id="inner-circle">
+            <div class="inner-circle-fill"></div>
+          </div>
+          <!-- Верхний круг над лавой — отбрасывает на неё тень -->
+          <div class="top-inner-circle" id="top-inner-circle">
+            <div class="inner-circle-fill dial-readout">
+              <div class="dial-deg" id="dial-deg">0°</div>
+              <div class="dial-label" id="dial-sub">Горелка на&nbsp;нуле</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Заголовок и содержимое других экранов (ручной режим, программы, редактор) -->
+      <div class="screen-title" id="screen-title" hidden></div>
+      <div class="alt-screen" id="alt-screen"></div>
+    </main>
+  </div>
+
+  <footer class="credit" id="credit">Разработка&nbsp;— <a href="https://atwinta.ru" target="_blank" rel="noopener">Атвинта</a></footer>
+
+  <!-- Строка подсказок у нижнего края окна -->
+  <div class="caption" id="caption" role="status" aria-live="polite"></div>
+
+  <script>
+    // Если окно меньше устройства — уменьшаем целиком, пропорционально.
+    // В большом окне экран всегда показывается в натуральную величину 1024 × 600.
+    // Место под панель презентера сверху и подпись снизу резервируется всегда, под подсказки — если хватает высоты.
+    var fitDevice = (function () {
+      var device = document.getElementById('device');
+      var deck = document.getElementById('deck');
+      var credit = document.getElementById('credit');
+      var margin = 12, CAPTION = 48;
+      function fit() {
+        if (!window.innerWidth || !window.innerHeight) return;
+        var top = deck.classList.contains('is-hidden') ? 0 : deck.offsetHeight;
+        var foot = credit.offsetHeight;
+        document.body.style.paddingTop = top + 'px';
+        var w = device.offsetWidth, h = device.offsetHeight;
+        var scale = Math.min(1,
+          (window.innerWidth - margin * 2) / w,
+          (window.innerHeight - top - foot - margin * 2) / h);
+        device.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
+        // Место под подсказку снизу — только если оно есть; размер экрана важнее
+        var spare = window.innerHeight - top - foot - h * scale - margin * 2;
+        document.body.style.paddingBottom = foot + Math.max(0, Math.min(CAPTION, spare)) + 'px';
+      }
+      window.addEventListener('resize', fit);
+      fit();
+      return fit;
+    })();
+
+    // Нажатое состояние кнопок: класс is-pressed, пока палец на кнопке.
+    // Если палец съехал с кнопки — нажатие снимается.
+    (function () {
+      document.querySelectorAll('.back-button').forEach(function (btn) {
+        function press() { btn.classList.add('is-pressed'); }
+        function release() { btn.classList.remove('is-pressed'); }
+        btn.addEventListener('pointerdown', press);
+        btn.addEventListener('pointerup', release);
+        btn.addEventListener('pointerleave', release);
+        btn.addEventListener('pointercancel', release);
+      });
+    })();
+
+    // Кнопка с защитой от случайного нажатия: срабатывает, только если её
+    // удерживать 1 с. Пока держат — заполняется светлой полосой слева направо.
+    // При срабатывании отправляет событие hold-confirm (к нему подключим действие).
+    (function () {
+      var btn = document.getElementById('action-button');
+      // Время удержания берём из токена --action-hold-time, чтобы полоса
+      // и срабатывание всегда совпадали
+      var HOLD_MS = parseFloat(getComputedStyle(btn).getPropertyValue('--action-hold-time')) * 1000 || 1000;
+      var timer = null;
+
+      function start() {
+        if (timer || btn.classList.contains('is-done')) return;
+        // Кнопка недоступна (нет газа/воды, горелка не в нуле) — сообщаем, но не запускаем
+        if (btn.classList.contains('is-disabled')) { btn.dispatchEvent(new CustomEvent('hold-denied', { bubbles: true })); return; }
+        btn.classList.add('is-holding');
+        timer = setTimeout(done, HOLD_MS);
+      }
+      function cancel() {
+        if (!timer) return;
+        clearTimeout(timer);
+        timer = null;
+        btn.classList.remove('is-holding');
+        btn.dispatchEvent(new CustomEvent('hold-cancel', { bubbles: true }));   // отпустили раньше времени
+      }
+      function done() {
+        timer = null;
+        btn.classList.remove('is-holding');
+        btn.classList.add('is-done');
+        btn.dispatchEvent(new CustomEvent('hold-confirm', { bubbles: true }));
+        setTimeout(function () { btn.classList.remove('is-done'); }, 600);
+      }
+
+      btn.addEventListener('pointerdown', start);
+      btn.addEventListener('pointerup', cancel);
+      btn.addEventListener('pointerleave', cancel);
+      btn.addEventListener('pointercancel', cancel);
+      btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      // Удержание пробела или Enter работает так же
+      btn.addEventListener('keydown', function (e) {
+        if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); start(); }
+      });
+      btn.addEventListener('keyup', function (e) {
+        if (e.key === ' ' || e.key === 'Enter') cancel();
+      });
+      btn.addEventListener('blur', cancel);
+    })();
+
+    // Огненная дуга в лунке.
+    // Значение 0…1 задаётся через gauge.setValue(0.6). Дуга начинается сверху
+    // и идёт по часовой стрелке, заполняя лунку целиком (радиусы 125…175 px).
+    // Цвет — угловой градиент от насыщенного красного к ярко-жёлтому кончику.
+    // Внутри — текстура лавы: тёмные «корки» и светящиеся прожилки, которые
+    // медленно перетекают к кончику. Считается видеокартой (WebGL).
+    var gauge = (function () {
+      var canvas = document.getElementById('gauge');
+      var SIZE = 350;
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = canvas.height = SIZE * dpr;
+
+      var value = 0, from = 0, to = 0, animStart = 0, animDur = 1, linear = false;
+      // v — до какого значения (0…1), duration — за сколько мс,
+      // isLinear — равномерно (для процесса) или с плавным торможением
+      function setValue(v, duration, isLinear) {
+        from = value;
+        to = Math.max(0, Math.min(1, v));
+        animStart = performance.now();
+        animDur = duration === undefined ? 1600 : duration;
+        linear = !!isLinear;
+      }
+      // Начать заполнение с нуля до полного круга, равномерно за duration мс
+      function start(duration) {
+        value = 0;
+        setValue(1, duration, true);
+      }
+      // Идёт ли сейчас заполнение
+      function isRunning() { return value < to; }
+      function getValue() { return value; }
+      function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
+
+      var gl = canvas.getContext('webgl', { premultipliedAlpha: true, antialias: false });
+      if (!gl) return { setValue: setValue, start: function () {}, setSpeed: function () {}, isRunning: function () { return false; }, getValue: function () { return value; }, setDone: function () {}, setPurge: function () {}, setAlarm: function () {} };
+
+      var VERT =
+        'attribute vec2 aPos;' +
+        'void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }';
+
+      var FRAG = [
+        'precision highp float;',
+        'uniform float uDpr, uTime, uRealTime, uValue;',
+        'uniform float uDone;',               // 0 — лава, 1 — зелёная шкала «шов готов»
+        'uniform float uPurge, uAlarm, uBlink;', // продувка (синяя), остановка (красная), вспышка
+        'const float SIZE = 350.0;',          // размер canvas
+        'const float OUTER = 175.0;',         // радиус большого круга
+        'const float WELD = 1.6;',            // сила точки сварки (подобрано вручную)
+        'const float BREATH_PERIOD = 2.0;',   // период дыхания, с
+        'const float BREATH_BRIGHT = 0.10;',  // на вдохе линия ярче на 10 %
+        'const vec3 BREATH_RED = vec3(0.902, 0.102, 0.000);',   // #E61A00 — цвет выдоха
+        'const float BREATH_REDNESS = 0.20;', // сила покраснения на выдохе (подобрано вручную)
+        'const float R = 150.0;',            // центр линии
+        'const float HW = 25.0;',            // половина толщины (50 px)
+        'const float TAU = 6.2831853;',
+        'const float START = -1.5707963;',   // 12 часов
+
+        // Угловой градиент: 0 — начало дуги, 1 — кончик
+        'vec3 ramp(float s){',
+        '  vec3 c0 = vec3(0.949, 0.082, 0.000);', // #F21500
+        '  vec3 c1 = vec3(1.000, 0.165, 0.000);', // #FF2A00
+        '  vec3 c2 = vec3(1.000, 0.353, 0.000);', // #FF5A00
+        '  vec3 c3 = vec3(1.000, 0.549, 0.000);', // #FF8C00
+        '  vec3 c4 = vec3(1.000, 0.753, 0.000);', // #FFC000
+        '  vec3 c5 = vec3(1.000, 0.910, 0.102);', // #FFE81A
+        '  if (s < 0.30) return mix(c0, c1, s / 0.30);',
+        '  if (s < 0.55) return mix(c1, c2, (s - 0.30) / 0.25);',
+        '  if (s < 0.75) return mix(c2, c3, (s - 0.55) / 0.20);',
+        '  if (s < 0.90) return mix(c3, c4, (s - 0.75) / 0.15);',
+        '  return mix(c4, c5, clamp((s - 0.90) / 0.10, 0.0, 1.0));',
+        '}',
+
+        'float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }',
+        'float noise(vec2 p){',
+        '  vec2 i = floor(p), f = fract(p);',
+        '  vec2 u = f * f * (3.0 - 2.0 * f);',
+        '  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),',
+        '             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);',
+        '}',
+        'float fbm(vec2 p){',
+        '  float v = 0.0, a = 0.5;',
+        '  mat2 m = mat2(1.6, 1.2, -1.2, 1.6);',
+        '  for (int i = 0; i < 4; i++){ v += a * noise(p); p = m * p; a *= 0.5; }',
+        '  return v;',
+        '}',
+
+        // Дыхание: на вдохе линия чуть ярче, на выдохе уходит в сочный красный
+        // (а не в тёмный), b — фаза от −1 до 1
+        // Зелёный градиент кнопки «ГОТОВО» по кругу: #109B62 → #14C27A → #4DDB9C
+        'vec3 greenRamp(float s){',
+        '  vec3 g0 = vec3(0.063, 0.608, 0.384);',
+        '  vec3 g1 = vec3(0.078, 0.761, 0.478);',
+        '  vec3 g2 = vec3(0.302, 0.859, 0.612);',
+        '  return s < 0.5 ? mix(g0, g1, s / 0.5) : mix(g1, g2, (s - 0.5) / 0.5);',
+        '}',
+
+        'vec3 breathe(vec3 c, float b){',
+        '  c *= 1.0 + BREATH_BRIGHT * max(b, 0.0);',
+        '  return mix(c, BREATH_RED, BREATH_REDNESS * max(-b, 0.0));',
+        '}',
+
+        // Точка сварки: плотное ядро на кончике и изредка
+        // вылетающие из него крошечные искры. Возвращает цвет и непрозрачность.
+        'vec4 weld(vec2 p, vec2 pe, vec2 tg){',
+        '  float dd = length(p - pe);',
+        '  float core = exp(-dd * dd / 32.0);',          // ядро ~4 px
+        '  float halo = exp(-dd * dd / 288.0) * 0.35;',  // ореол ~12 px
+        '  vec3 c = vec3(1.0, 0.98, 0.85) * core * 0.9 + vec3(1.0, 0.85, 0.35) * halo * 0.5;',
+        '  float a = core * 0.9 + halo * 0.5;',
+        '  float ta = atan(tg.y, tg.x);',
+        '  for (int i = 0; i < 10; i++) {',
+        '    float fi = float(i);',
+        '    float life = 0.35 + 0.35 * fract(sin(fi * 91.7) * 4375.85);',
+        '    float tt = uRealTime / life + fract(sin(fi * 17.3) * 9341.1);',
+        '    float cyc = floor(tt), k = fract(tt);',
+        '    float rnd = fract(sin((cyc + 1.0) * (fi + 3.1) * 12.9898) * 43758.5453);',
+        '    if (rnd < 0.45) continue;',                 // искра вылетает не каждый раз
+        '    float ang = ta + (fract(sin((cyc + 2.0) * (fi + 7.7) * 78.233) * 12345.67) - 0.5) * 2.6;',
+        '    float len = 6.0 + 12.0 * fract(rnd * 7.13);',
+        '    vec2 dir = vec2(cos(ang), sin(ang));',
+        '    vec2 head = pe + dir * len * k;',
+        '    vec2 tl = pe + dir * len * max(k - 0.25, 0.0);',
+        '    vec2 pa = p - tl, ba = head - tl;',
+        '    float hh = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);',
+        '    float sd = length(pa - ba * hh);',
+        '    float sp = exp(-sd * sd / 1.28) * (1.0 - k);',
+        '    c += vec3(1.0, 0.92, 0.6) * sp;',
+        '    a += sp;',
+        '  }',
+        '  return vec4(c, min(a, 1.0)) * WELD;',
+        '}',
+
+        'vec4 lavaMain(){',
+        '  vec2 p = vec2(gl_FragCoord.x, SIZE * uDpr - gl_FragCoord.y) / uDpr;',
+        '  vec2 d = p - vec2(SIZE * 0.5);',
+        '  float r = length(d);',
+        '  float rel = mod(atan(d.y, d.x) - START, TAU);',  // угол от 12 часов по часовой
+        '  float sweep = uValue * TAU;',
+        '  if (sweep < 0.002) return vec4(0.0);',
+
+        // Расстояние до формы дуги со скруглёнными концами
+        '  vec2 c = vec2(SIZE * 0.5);',
+        '  vec2 pStart = c + R * vec2(cos(START), sin(START));',
+        '  vec2 pEnd = c + R * vec2(cos(START + sweep), sin(START + sweep));',
+        '  vec2 tg = vec2(-sin(START + sweep), cos(START + sweep));',   // направление движения на кончике
+        '  float s; float dist; float relU = rel;',
+        '  if (rel <= sweep) {',
+        '    dist = abs(r - R) - HW;',
+        '    s = rel / sweep;',
+        '  } else {',
+        '    float ds = length(p - pStart), de = length(p - pEnd);',
+        '    dist = min(ds, de) - HW;',
+        '    s = ds < de ? 0.0 : 1.0;',
+        '    if (ds < de) relU = rel - TAU;',
+        '  }',
+        // Круглый кончик всегда поверх: когда дуга почти или полностью замкнута,
+        // светлый конец ложится на тёмное начало, а не стыкуется с ним
+        '  float along = dot(p - pEnd, tg);',   // > 0 — впереди кончика
+        '  float deCap = length(p - pEnd);',
+        '  float capMask = along > 0.0 ? clamp(0.5 - (deCap - HW) * uDpr, 0.0, 1.0) : 0.0;',
+        '  if (capMask > 0.0) {',
+        '    s = mix(s, 1.0, capMask);',
+        '    relU = mix(relU, sweep + along / R, capMask);',
+        '    dist = min(dist, deCap - HW);',
+        '  }',
+        // Лёгкая тень от кончика на тёмное начало, если они перекрываются
+        '  float capShadow = along > 0.0 ? exp(-max(deCap - HW, 0.0) / 5.0) * (1.0 - capMask) : 0.0;',
+
+        '  float t = uTime;',
+        '  float breath = sin(TAU * uRealTime / BREATH_PERIOD);',
+        '  float flick = 0.75 + 0.15 * sin(uRealTime * 11.0) + 0.1 * sin(uRealTime * 23.7);',
+        '  float tipD = length(p - pEnd);',
+
+        // Снаружи дуги: мягкое свечение у концов (только внутри лунки) и точка сварки
+        '  if (dist > 0.0) {',
+        '    float inWell = smoothstep(R - HW, R - HW + 8.0, r) * (1.0 - smoothstep(R + HW - 8.0, R + HW, r));',   // мягко гаснет у стенок лунки
+        '    vec3 pc = vec3(0.0); float pa = 0.0;',
+        // Свечение считаем от обоих концов сразу и смешиваем —
+        // так между почти сомкнутыми концами нет резкой границы
+        '    {',
+        '      float gS = exp(-max(length(p - pStart) - HW, 0.0) / 7.0) * 0.25;',
+        '      float gE = exp(-max(tipD - HW, 0.0) / 7.0) * 0.6;',
+        '      gE += exp(-tipD * tipD / 2200.0) * 0.45 * flick * step(HW, tipD);',
+        '      float g = gS + gE;',
+        '      float ga = g * 0.6 * inWell;',
+        '      vec3 gc = (vec3(1.0, 0.15, 0.0) * gS + vec3(1.0, 0.75, 0.0) * gE) / max(g, 1e-4);',
+        '      gc = mix(gc, (greenRamp(0.0) * gS + greenRamp(1.0) * gE) / max(g, 1e-4), uDone);',
+        '      pc += gc * ga;',
+        '      pa += ga;',
+        '    }',
+        '    vec4 w = weld(p, pEnd, tg); pc += w.rgb; pa += w.a;',
+        '    pc = mix(breathe(pc / max(pa, 1e-4), breath), pc / max(pa, 1e-4), uDone) * pa;',
+        '    pa = min(pa, 1.0);',
+        '    pc = min(pc, vec3(pa));',
+        '    float aa = clamp(1.0 - dist * uDpr, 0.0, 1.0);',
+        '    vec3 edgeCol = mix(min(breathe(ramp(s), breath), 1.0), greenRamp(s), uDone);',
+        '    return vec4(mix(pc, edgeCol, aa), mix(pa, 1.0, aa));',
+        '  }',
+
+        // Координаты вдоль дуги (u, px) и поперёк (v, −1…1)
+        '  float u = relU * R;',
+        '  float v = (r - R) / HW;',
+        '  vec3 base = ramp(s);',
+
+        // Лава как в лава-лампе: крупные мягкие капли без чёткого рисунка,
+        // медленно сливаются, разделяются и плывут к кончику
+        '  vec2 q = vec2(u / 120.0, v * 0.4);',
+        '  q += 0.45 * vec2(noise(q * 0.7 + vec2(t * 0.06, 0.0)), noise(q * 0.7 + vec2(4.0, -t * 0.048)));',
+        '  float a1 = noise(q + vec2(-t * 0.12, t * 0.048));',
+        '  float a2 = noise(q * 1.7 + vec2(t * 0.084 + 3.1, -t * 0.06 + 7.4));',
+        '  float n = a1 * 0.65 + a2 * 0.35;',
+        '  float blob = smoothstep(0.36, 0.76, n);',
+
+        // Между каплями — тот же цвет чуть глубже, капли — на шаг горячее
+        '  vec3 cool = base * vec3(0.92, 0.82, 0.82);',
+        // В красной и оранжевой части капли сдвинуты по градиенту сильнее,
+        // чтобы были так же заметны, как у жёлтого конца
+        '  vec3 hot = min(ramp(min(1.0, s + mix(0.5, 0.22, s))) * 1.06, 1.0);',
+        '  vec3 col = mix(cool, hot, blob);',
+        '  col += hot * 0.12 * smoothstep(0.6, 0.85, n);',
+
+        // Объём: края линии уходят в глубокий красный, а не в чёрный —
+        // «раскалённая середина, остывающие края», без грязного коричневого
+        '  vec3 shadeRed = vec3(0.702, 0.059, 0.000);',   // #B30F00
+        '  col = mix(col, shadeRed, 0.32 * pow(abs(v), 3.0));',
+
+        // Тень лунки: сверху у внешнего края темнее, снизу светлее
+        '  float edge = exp(-(OUTER - r) / 16.0);',
+        '  float top = clamp(-d.y / r * 0.5 + 0.5, 0.0, 1.0);',
+        '  col = mix(col, shadeRed, 0.28 * edge * top);',
+        '  col += 0.10 * edge * (1.0 - top);',
+
+        // Искры: мелкие светлые и красные частицы с коротким хвостом быстро летят
+        // от начала дуги к кончику. Скорость не зависит от скорости лавы.
+        '  float arcLen = sweep * R;',
+        '  float sparksLight = 0.0, sparksDark = 0.0;',
+        '  if (uDone < 0.999) for (int i = 0; i < 128; i++) {',
+        '    float fi = float(i);',
+        '    float h1 = fract(sin(fi * 12.9898) * 43758.5453);',
+        '    float h2 = fract(sin(fi * 78.233) * 12345.6789);',
+        '    float h3 = fract(sin(fi * 39.425) * 24634.6345);',
+        '    float spd = 225.0 + 165.0 * h2;',                       // px/с вдоль дуги
+        '    float ui = fract(h1 + uRealTime * spd / (TAU * R)) * TAU * R;',
+        '    float lane = (h3 * 2.0 - 1.0) * 15.0 + sin(uRealTime * (2.0 + 3.0 * h2) + fi) * 3.0;',
+        '    float du = u - ui;',
+        '    float dv = (r - R) - lane;',
+        '    if (abs(dv) > 10.0) continue;',   // искра далеко поперёк линии — пропускаем
+        '    float size = 1.2 + 1.2 * h3;',
+        '    float tail = du < 0.0 ? size * 25.0 : size * 3.0;',      // размытие вдоль движения: длинный хвост, мягкий перед
+        '    float fade = smoothstep(0.0, 40.0, ui) * (1.0 - smoothstep(arcLen - 90.0, arcLen - 10.0, ui));',
+        '    float sp = exp(-(dv * dv) / (2.0 * size * size) - (du * du) / (2.0 * tail * tail)) * fade * 0.6;',
+        '    if (mod(fi, 2.0) < 1.0) sparksLight += sp; else sparksDark += sp;',
+        '  }',
+        // Светлые искры — 10,5 %, тёмные — #CC1100, 17 % (подобрано вручную)
+        '  col += vec3(1.0, 0.88, 0.55) * min(sparksLight, 1.0) * 0.105;',
+        '  col = mix(col, vec3(0.800, 0.067, 0.000), min(sparksDark, 1.0) * 0.17);',
+
+        // Мерцающий кончик
+        '  col *= 1.0 - 0.3 * capShadow;',
+        '  col += vec3(1.0, 0.85, 0.15) * exp(-tipD * tipD / 700.0) * 0.5 * flick;',
+        '  col += weld(p, pEnd, tg).rgb;',
+        '  col = breathe(col, breath);',
+
+        // Шов готов: лава плавно сменяется спокойной зелёной шкалой с тем же объёмом
+        '  if (uDone > 0.0) {',
+        '    vec3 g = greenRamp(s);',
+        '    vec3 shadeGreen = vec3(0.043, 0.420, 0.267);',   // #0B6B44
+        '    g = mix(g, shadeGreen, 0.32 * pow(abs(v), 3.0));',
+        '    g = mix(g, shadeGreen, 0.28 * edge * top);',
+        '    g += 0.10 * edge * (1.0 - top);',
+        '    g *= 1.0 - 0.3 * capShadow;',
+        '    col = mix(col, g, uDone);',
+        '  }',
+
+        '  float aa = clamp(0.5 - dist * uDpr, 0.0, 1.0);',
+        '  return vec4(min(col, 1.0) * aa, aa);',
+        '}',
+
+        // Объём кольца для полностью залитых режимов — тот же приём, что у лавы
+        'vec3 ringShade(vec3 c, vec3 deep, float r, vec2 d){',
+        '  float v = (r - R) / HW;',
+        '  float edge = exp(-(OUTER - r) / 16.0);',
+        '  float top = clamp(-d.y / r * 0.5 + 0.5, 0.0, 1.0);',
+        '  c = mix(c, deep, 0.32 * pow(abs(v), 3.0));',
+        '  c = mix(c, deep, 0.28 * edge * top);',
+        '  return c + 0.10 * edge * (1.0 - top);',
+        '}',
+        // Диагональ из левого нижнего угла (0) в правый верхний (1)
+        'float diag(vec2 d){ return clamp(0.5 + dot(d, vec2(0.7071, -0.7071)) / (2.0 * OUTER), 0.0, 1.0); }',
+        'vec3 ramp3(vec3 a, vec3 b, vec3 c, float t){ return t < 0.5 ? mix(a, b, t / 0.5) : mix(b, c, (t - 0.5) / 0.5); }',
+
+        // Продувка: синий градиент по диагонали и быстрые штрихи газа снизу-слева вверх-вправо
+        'vec3 purgeColor(vec2 p, vec2 d, float r){',
+        '  vec3 col = ramp3(vec3(0.024, 0.314, 0.784), vec3(0.039, 0.498, 0.878), vec3(0.239, 0.690, 0.949), diag(d));',
+        '  col = ringShade(col, vec3(0.016, 0.216, 0.604), r, d);',      // глубокий синий #04379A
+        '  float along = dot(p, vec2(0.7071, -0.7071));',                 // вдоль движения
+        '  float across = dot(p, vec2(0.7071, 0.7071));',                 // поперёк
+        '  float lane = floor(across / 5.0);',
+        '  float h1 = fract(sin(lane * 12.9898) * 43758.5453);',
+        '  float h2 = fract(sin(lane * 78.233) * 12345.6789);',
+        '  float h3 = fract(sin(lane * 39.425) * 24634.6345);',
+        '  if (h1 > 0.06) {',                                             // пустых дорожек почти нет
+        '    float spd = 1680.0 + 1440.0 * h2;',                          // px/с
+        '    float period = 400.0 + 320.0 * h3;',                         // шаг растёт вместе с длиной — штрихи не сливаются
+        '    float len = 108.0 + 132.0 * h2;',
+        '    float pos = mod(along - uRealTime * spd + h1 * period, period);',
+        '    float streak = smoothstep(0.0, len, pos) * (1.0 - smoothstep(len - 3.0, len, pos));',
+        '    float dl = (fract(across / 5.0) - 0.5) * 5.0;',
+        '    streak *= exp(-dl * dl / 1.3);',
+        '    if (h1 < 0.66) col += vec3(1.0) * streak * 0.32;',           // светлые штрихи
+        '    else col = mix(col, vec3(0.016, 0.216, 0.604), streak * 0.3);',  // тёмные штрихи
+        '  }',
+        '  return col;',
+        '}',
+
+        // Остановка: красный градиент по диагонали, к центру линии — светлый блик.
+        // Вспышки усиливают только яркость блика, края остаются насыщенно-красными
+        'vec3 alarmColor(vec2 d, float r){',
+        '  vec3 col = ramp3(vec3(0.659, 0.078, 0.059), vec3(0.851, 0.176, 0.176), vec3(0.949, 0.361, 0.361), diag(d));',
+        '  col = ringShade(col, vec3(0.478, 0.043, 0.031), r, d);',       // глубокий красный #7A0B08
+        '  float v = (r - R) / HW;',
+        '  float glare = exp(-v * v / 0.18);',                             // блик по центру линии
+        '  col = mix(col, vec3(1.0, 0.56, 0.52), glare * (0.35 + 0.5 * uBlink));',
+        '  return col;',
+        '}',
+
+        'void main(){',
+        '  vec4 L = (uPurge > 0.999 || uAlarm > 0.999) ? vec4(0.0) : lavaMain();',   // лаву не считаем, если её не видно
+        '  if (uPurge > 0.001 || uAlarm > 0.001) {',
+        '    vec2 p = vec2(gl_FragCoord.x, SIZE * uDpr - gl_FragCoord.y) / uDpr;',
+        '    vec2 d = p - vec2(SIZE * 0.5);',
+        '    float r = length(d);',
+        '    float band = clamp(0.5 - (abs(r - R) - HW) * uDpr, 0.0, 1.0);',   // всё кольцо целиком
+        '    if (uPurge > 0.001) L = mix(L, vec4(min(purgeColor(p, d, r), 1.0) * band, band), uPurge);',
+        '    if (uAlarm > 0.001) L = mix(L, vec4(min(alarmColor(d, r), 1.0) * band, band), uAlarm);',
+        '  }',
+        '  gl_FragColor = L;',
+        '}'
+      ].join('\n');
+
+      function compile(type, src) {
+        var sh = gl.createShader(type);
+        gl.shaderSource(sh, src);
+        gl.compileShader(sh);
+        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+          console.error(gl.getShaderInfoLog(sh));
+        }
+        return sh;
+      }
+      var prog = gl.createProgram();
+      gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+      gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+      gl.linkProgram(prog);
+      gl.useProgram(prog);
+
+      var buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      var aPos = gl.getAttribLocation(prog, 'aPos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+      var uDpr = gl.getUniformLocation(prog, 'uDpr');
+      var uTime = gl.getUniformLocation(prog, 'uTime');
+      var uRealTime = gl.getUniformLocation(prog, 'uRealTime');
+      var uValue = gl.getUniformLocation(prog, 'uValue');
+      var uDone = gl.getUniformLocation(prog, 'uDone');
+      var uPurge = gl.getUniformLocation(prog, 'uPurge');
+      var uAlarm = gl.getUniformLocation(prog, 'uAlarm');
+      var uBlink = gl.getUniformLocation(prog, 'uBlink');
+
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform1f(uDpr, dpr);
+
+      var speed = 3, lavaTime = 0, prevNow = 0;   // скорость лавы, подобрана вручную
+      function setSpeed(v) { speed = v; }
+      // Зелёная шкала «шов готов»: плавный переход за 0,6 с
+      var done = 0, doneTarget = 0, DONE_FADE = 0.6, doneLast = 0;
+      function setDone(on) { doneTarget = on ? 1 : 0; }
+      // Продувка (синяя) и остановка (красная): переход за 0,3 с
+      var purge = 0, purgeTarget = 0, alarm = 0, alarmTarget = 0, MODE_FADE = 0.3, alarmStart = 0;
+      function setPurge(on) { purgeTarget = on ? 1 : 0; }
+      function setAlarm(on) { if (on && !alarmTarget) alarmStart = performance.now(); alarmTarget = on ? 1 : 0; }
+      function approach(v, target, step) { return target > v ? Math.min(target, v + step) : Math.max(target, v - step); }
+      // Вспышки остановки: две короткие вспышки раз в 2,4 с, между ними — спокойно
+      function blinkAt(now) {
+        var t = ((now - alarmStart) / 1000) % 2.4;
+        function pulse(c) { var x = (t - c) / 0.14; return Math.abs(x) < 1 ? Math.cos(x * Math.PI / 2) : 0; }
+        return Math.max(pulse(0.14), pulse(0.46));
+      }
+
+      function frame(now) {
+        // Длительность 0 — значение меняется мгновенно (без деления на ноль)
+        var p = animDur > 0 ? Math.max(0, Math.min(1, (now - animStart) / animDur)) : 1;
+        value = from + (to - from) * (linear ? p : easeOutCubic(p));
+        // Время лавы копится с учётом скорости, чтобы смена скорости была без скачков
+        lavaTime += (prevNow ? now - prevNow : 0) / 1000 * speed;
+        prevNow = now;
+        gl.uniform1f(uTime, lavaTime);
+        gl.uniform1f(uRealTime, now / 1000);
+        gl.uniform1f(uValue, value);
+        // шаг перехода — по реальному времени, не зависит от частоты кадров
+        var step = (doneLast ? Math.min(100, now - doneLast) : 0) / 1000 / DONE_FADE;
+        doneLast = now;
+        done = doneTarget > done ? Math.min(doneTarget, done + step) : Math.max(doneTarget, done - step);
+        gl.uniform1f(uDone, done);
+        var mstep = step * DONE_FADE / MODE_FADE;
+        purge = approach(purge, purgeTarget, mstep);
+        alarm = approach(alarm, alarmTarget, mstep);
+        gl.uniform1f(uPurge, purge);
+        gl.uniform1f(uAlarm, alarm);
+        gl.uniform1f(uBlink, alarmTarget ? blinkAt(now) : 0);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+
+      return { setValue: setValue, start: start, setSpeed: setSpeed, isRunning: isRunning, getValue: getValue, setDone: setDone, setPurge: setPurge, setAlarm: setAlarm };
+    })();
+
+    // Процесс сварки и навигация — логика варианта v2 симулятора (стиль — наш).
+    // Этапы: ready → prepurge (продувка газом) → warm (прогрев) → welding (сварка)
+    //        → decay (затухание дуги) → postpurge (продувка) → done (шов готов)
+    //        или halt («Стоп») → postpurge → aborted (остановлено) → returning (возврат в 0) → ready.
+    // Экраны: weld (сварка), manual (ручной режим), programs (место сохранения), editor (редактор).
+    // Длительности — из программ (газ до/после, прогрев, затухание, время прохода),
+    // ускорены переключателем «Скорость демо» на панели сверху.
+    (function () {
+      // ================= данные программ (как в v2) =================
+      var MODELS = ['ORC40', 'ORC80', 'ORC118', 'ORC170', '5/10H', 'MINI', 'ORO-130'];
+      function headOf(m) { return m === 'ORO-130' ? 'open' : 'closed'; }
+      var BASE_COMMON = {
+        headCode: 46, sectors: 4, gasBefore: 10, gasAfter: 10, warmCur: 90, warmTime: 2.0, decay: 8.0,
+        ret0: true, retSpeed: 200, liftAfter: false, liftAfterV: 1.0, liftShort: false, liftShortV: 1.0,
+        wireDelay: 0.1, wireStep: 10, wireHold: 0.1, backTime: 0.1, oscDelay: 0.1, autoSwitch: false, edgeLock: false,
+        avc: false, avcBoost: 0.5, avcAcc: 0.1, trackDelay: 0.1, curMode: 'Импульс', secCur: 10, rotBoost: 10
+      };
+      function fill(v, n) { return Array.isArray(v) ? v.slice() : Array(n).fill(v); }
+      function mkProg(o) {
+        var n = 4;
+        function f(v, d) { return fill(v === undefined ? d : v, n); }
+        return {
+          id: o.id, slot: o.slot, code: o.code, model: o.model, d: o.d, t: o.t,
+          common: Object.assign({}, BASE_COMMON, o.common || {}),
+          sec: {
+            pulseHi: f(o.pulseHi), pulseHiT: f(o.pulseHiT, 0.15), base: f(o.base), baseT: f(o.baseT, 0.30),
+            speed: f(o.speed), wire: f(o.wire, 0), oscW: f(o.oscW, [60, 60, 25, 25]), oscV: f(o.oscV, 1800),
+            oscOff: f(o.oscOff, 0.1), dwellL: f(o.dwellL, 0.60), dwellR: f(o.dwellR, 0.60),
+            avcV: f(o.avcV, 10.7), avcSpd: f(o.avcSpd, 120)
+          }
+        };
+      }
+      var SEED = [
+        mkProg({ id: 'p12', slot: 1, code: 'П12', model: 'ORC80', d: 57.0, t: 3.0, pulseHi: [150, 147, 144, 141], base: 60, speed: 90 }),
+        mkProg({ id: 'p14', slot: 2, code: 'П14', model: 'ORC80', d: 57.0, t: 4.0, pulseHi: [165, 162, 158, 154], base: 65, speed: 80, common: { gasAfter: 12 } }),
+        mkProg({ id: 'p05', slot: 3, code: 'П05', model: 'ORC40', d: 25.0, t: 2.0, pulseHi: [95, 93, 91, 89], base: 40, speed: 120, common: { gasBefore: 8, gasAfter: 8 } }),
+        mkProg({ id: 'p22', slot: 4, code: 'П22', model: 'ORC118', d: 89.0, t: 4.5, pulseHi: [178, 174, 170, 166], base: 70, speed: 60, common: { gasBefore: 12, gasAfter: 12 } }),
+        mkProg({ id: 'p31', slot: 5, code: 'П31', model: 'ORO-130', d: 108.0, t: 6.0, pulseHi: [170, 168, 165, 162], base: 75, speed: 0.25, wire: [500, 500, 520, 520], avcV: 10.8, common: { avc: true } }),
+        mkProg({ id: 'p33', slot: 6, code: 'П33', model: 'ORO-130', d: 114.0, t: 8.0, pulseHi: [182, 179, 176, 173], base: 80, speed: 0.22, wire: [540, 540, 560, 560], avcV: 11.0, common: { avc: true, gasAfter: 12 } })
+      ];
+      var SLOTS = 8;
+      // Параметры программы: подписи и пределы
+      var SEC = {
+        pulseHi: { l: 'Ток высокого импульса', u: 'А', min: 5, max: 300, dec: 0 },
+        pulseHiT: { l: 'Время высокого импульса', u: 'с', min: 0.01, max: 2, dec: 2 },
+        base: { l: 'Рабочий ток', u: 'А', min: 5, max: 300, dec: 0 },
+        baseT: { l: 'Время рабочего тока', u: 'с', min: 0.01, max: 2, dec: 2 },
+        speed: { l: 'Скорость сварки', u: 'об/мин', min: 0.01, max: 200, dec: 0 },
+        wire: { l: 'Подача проволоки', u: 'мм/мин', min: 0, max: 3000, dec: 0, open: 1 },
+        oscW: { l: 'Ширина колебаний', u: 'мм', min: 0, max: 200, dec: 0, open: 1 },
+        oscV: { l: 'Скорость колебаний', u: 'мм/мин', min: 100, max: 5000, dec: 0, open: 1 },
+        oscOff: { l: 'Смещение от центра', u: 'мм', min: -5, max: 5, dec: 1, open: 1 },
+        dwellL: { l: 'Задержка колебаний влево', u: 'с', min: 0, max: 5, dec: 2, open: 1 },
+        dwellR: { l: 'Задержка колебаний вправо', u: 'с', min: 0, max: 5, dec: 2, open: 1 },
+        avcV: { l: 'Слежение по напряжению', u: 'В', min: 5, max: 30, dec: 1 },
+        avcSpd: { l: 'Слежение по скорости', u: 'мм/мин', min: 10, max: 500, dec: 0 }
+      };
+      var COM = {
+        gasBefore: { l: 'Продувка газа перед сваркой', u: 'с', min: 0, max: 60, dec: 1 },
+        gasAfter: { l: 'Продувка газа после сварки', u: 'с', min: 0, max: 60, dec: 1 },
+        warmCur: { l: 'Сила тока прогрева материала', u: 'А', min: 0, max: 300, dec: 0 },
+        warmTime: { l: 'Время прогрева материала', u: 'с', min: 0, max: 20, dec: 1 },
+        decay: { l: 'Время затухания', u: 'с', min: 0, max: 30, dec: 1 },
+        ret0: { l: 'Возврат в точку 0 после сварки', type: 'bool' },
+        retSpeed: { l: 'Скорость возврата', u: '', min: 10, max: 999, dec: 0 },
+        liftAfter: { l: 'Подъём горелки после сварки', type: 'bool' },
+        liftAfterV: { l: 'Подъём после сварки, значение', u: '', min: 0, max: 10, dec: 1 },
+        liftShort: { l: 'Подъём при замыкании', type: 'bool' },
+        liftShortV: { l: 'Подъём при замыкании, значение', u: '', min: 0, max: 10, dec: 1 },
+        wireDelay: { l: 'Задержка подачи проволоки', u: 'с', min: 0, max: 5, dec: 1, open: 1 },
+        wireStep: { l: 'Шаг подачи проволоки', u: '%', min: 1, max: 50, dec: 0, open: 1 },
+        wireHold: { l: 'Время задержки проволоки', u: 'с', min: 0, max: 5, dec: 1, open: 1 },
+        backTime: { l: 'Back time', u: 'с', min: 0, max: 5, dec: 1, open: 1 },
+        oscDelay: { l: 'Задержка колебаний', u: 'с', min: 0, max: 5, dec: 1, open: 1 },
+        autoSwitch: { l: 'Автоматическое переключение', type: 'bool', open: 1 },
+        edgeLock: { l: 'Фиксатор кромки', type: 'bool', open: 1 },
+        avc: { l: 'Автоматическое слежение высоты дуги', type: 'bool' },
+        avcBoost: { l: 'Увеличение напряжения', u: 'В', min: 0, max: 5, dec: 1 },
+        avcAcc: { l: 'Точность слежения', u: 'В', min: 0.1, max: 2, dec: 1 },
+        trackDelay: { l: 'Задержка отслеживания', u: 'с', min: 0, max: 5, dec: 1 },
+        curMode: { l: 'Сила тока', type: 'enum', opts: ['Импульс', 'Постоянный'] },
+        secCur: { l: 'Вторичный ток', u: 'А', min: 0, max: 100, dec: 0 },
+        rotBoost: { l: 'Увеличение скорости вращения', u: '%', min: 1, max: 50, dec: 0 },
+        headCode: { l: 'Код сварочной головки', u: '', min: 1, max: 99, dec: 0 },
+        sectors: { l: 'Количество секторов', u: '', min: 2, max: 6, dec: 0 }
+      };
+      var ETABS = [
+        { id: 'cur', l: 'Ток и вращение', rows: [['s', 'pulseHi'], ['s', 'pulseHiT'], ['s', 'base'], ['s', 'baseT'], ['s', 'speed'], ['s', 'wire']] },
+        { id: 'osc', l: 'Колебания', open: 1, rows: [['s', 'oscW'], ['s', 'oscV'], ['s', 'oscOff'], ['s', 'dwellL'], ['s', 'dwellR'], ['c', 'oscDelay'], ['c', 'autoSwitch'], ['c', 'edgeLock']] },
+        { id: 'avc', l: 'Слежение за дугой', rows: [['c', 'avc'], ['s', 'avcV'], ['s', 'avcSpd'], ['c', 'avcBoost'], ['c', 'avcAcc'], ['c', 'trackDelay']] },
+        { id: 'com', l: 'Общие', rows: [['g', 'Газ'], ['c', 'gasBefore'], ['c', 'gasAfter'], ['g', 'Прогрев'], ['c', 'warmCur'], ['c', 'warmTime'],
+          ['g', 'Завершение сварки'], ['c', 'decay'], ['c', 'ret0'], ['c', 'retSpeed'], ['c', 'liftAfter'], ['c', 'liftAfterV'], ['c', 'liftShort'], ['c', 'liftShortV'],
+          ['g', 'Проволока'], ['c', 'wireDelay'], ['c', 'wireStep'], ['c', 'wireHold'], ['c', 'backTime'],
+          ['g', 'Ток и вращение'], ['c', 'curMode'], ['c', 'secCur'], ['c', 'rotBoost'],
+          ['g', 'Головка'], ['c', 'headCode'], ['c', 'sectors']] }
+      ];
+      // Функции программы («таблетки» и лист «Функции»)
+      var FUNCS = [
+        { k: 'ret0', chip: 'Возврат в 0', l: 'Возврат в точку 0 после сварки', hint: 'После сварки горелка возвращается в точку 0' },
+        { k: 'avc', chip: 'Слежение за дугой', l: 'Автоматическое слежение высоты дуги', hint: 'Слежение по напряжению и по скорости' },
+        { k: 'edgeLock', chip: 'Фиксатор кромки', l: 'Фиксатор кромки', hint: '', open: 1 },
+        { k: 'autoSwitch', chip: 'Автопереключение', l: 'Автоматическое переключение', hint: '', open: 1 },
+        { k: 'liftAfter', chip: 'Подъём горелки', l: 'Подъём горелки после сварки', hint: 'Значение подъёма задаётся в программе' },
+        { k: 'liftShort', chip: 'Подъём при замыкании', l: 'Подъём при замыкании', hint: 'Значение подъёма задаётся в программе' }
+      ];
+      // Коррекции во время сварки
+      var CORR = {
+        wire: { l: 'Проволока', u: '%', step: function () { return prog().common.wireStep; }, d: 0, lim: 50, lr: true },
+        cur:  { l: 'Ток', u: '%', step: function () { return 1; }, d: 1, lim: 20 },
+        arc:  { l: 'Длина дуги', u: 'В', step: function () { return 0.1; }, d: 1, lim: 2 },
+        spd:  { l: 'Скорость', u: '%', step: function () { return prog().common.rotBoost; }, d: 0, lim: 50 },
+        osc:  { l: 'Колебания', u: 'мм', step: function () { return 0.1; }, d: 1, lim: 3, lr: true }
+      };
+
+      // ================= иконки (наш стиль: линии, скругления) =================
+      var ICON = {
+        x: '<path d="M7 7l10 10M17 7L7 17"/>', plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>',
+        chevL: '<path d="M15 5l-7 7 7 7"/>', chevR: '<path d="M9 5l7 7-7 7"/>',
+        ccw: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+        cw: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+        gas: '<path d="M10.2 2.5h3.6M12 2.5v3"/><path d="M9 21.5V9.2a3 3 0 0 1 6 0v12.3z"/>',
+        drop: '<path d="M12 3.2c3.7 4.4 6.2 7.8 6.2 10.9a6.2 6.2 0 0 1-12.4 0c0-3.1 2.5-6.5 6.2-10.9z"/>',
+        moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+        sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+        retract: '<path d="M12 21V8"/><path d="M7.5 12.5L12 8l4.5 4.5"/><path d="M6 4h12"/>',
+        link: '<path d="M4 12h16"/><path d="M4 7v10M20 7v10"/>',
+        info: '<circle cx="12" cy="12" r="10"/><path d="M12 11v6M12 7.5v.3"/>',
+        alert: '<circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.3"/>'
+      };
+      function svg(name, cls) { return '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true">' + ICON[name] + '</svg>'; }
+
+      // ================= состояние =================
+      var RUNNING = ['prepurge', 'warm', 'welding', 'decay', 'halt', 'postpurge', 'returning'];
+      var HALT_MS = 1500;                              // сколько держится статус «Стоп» (реальное время)
+      function clone(o) { return JSON.parse(JSON.stringify(o)); }
+      var S;
+      function freshState(head) {
+        var progs = clone(SEED);
+        var p = progs.filter(function (x) { return headOf(x.model) === (head || 'open'); })[0];
+        return {
+          screen: 'weld', sheet: null, progs: progs, progId: p.id, pSel: p.id,
+          phase: 'ready', speed: S ? S.speed : 10, scn: 'ok', standby: false,
+          torch: 0, absBase: 74,
+          weldT: 0, phaseT: 0, phaseR: 0, stopAngle: 0, completed: false, soft: false, err: null, sum: null,
+          acc: { n: 0, cur: 0, volt: 0 }, corr: { cur: 0, arc: 0, osc: 0, wire: 0, spd: 0 }, tab: 'cur',
+          jog: { wire: 0, osc: 0, arc: 0, cur: 0, spd: 0 }, test: { gas: 0, water: 0 },
+          ed: null, kp: null
+        };
+      }
+      S = freshState('open');
+
+      // ================= утилиты =================
+      var NBSP = ' ', NB = '&nbsp;';
+      function $(id) { return document.getElementById(id); }
+      function fx(v, d) { return (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d); }
+      function f1(v) { return fx(v, 1); }
+      function f2(v) { return fx(v, 2); }
+      function mmss(t) { t = Math.max(0, Math.round(t)); return Math.floor(t / 60) + ':' + ('0' + t % 60).slice(-2); }
+      function mmss0(t) { t = Math.max(0, Math.floor(t)); return ('0' + Math.floor(t / 60)).slice(-2) + ':' + ('0' + t % 60).slice(-2); }
+      function signed(v, d) { return (v > 0 ? '+' : '') + fx(v, d); }
+      function norm(a) { return ((a % 360) + 360) % 360; }
+      function avg(a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; }
+      function prog() { return S.progs.filter(function (p) { return p.id === S.progId; })[0]; }
+      function isOpenP(p) { return headOf(p.model) === 'open'; }
+      function isOpen() { return isOpenP(prog()); }
+      function nSec() { return prog().common.sectors; }
+      function gasOk() { return S.scn !== 'gas'; }
+      function waterOk() { return S.scn !== 'water'; }
+      function torchZero() { return Math.abs(norm(S.torch + 180) - 180) < 0.05; }
+      function speedDec(p) { return isOpenP(p) ? 2 : 0; }
+      function revTime(p) { return isOpenP(p) ? 64 / avg(p.sec.speed) : 11520 / avg(p.sec.speed); }
+      function plural(n, a, b, c) { var m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : (m >= 2 && m <= 4 && (h < 10 || h >= 20) ? b : c); }
+      function funcsAvail() { return FUNCS.filter(function (f) { return !f.open || isOpen(); }); }
+      function setText(id, t) { var e = $(id); if (e && e.textContent !== String(t)) e.textContent = t; }
+
+      // Подсказка под устройством
+      var capT, caption = $('caption');
+      function note(msg) {
+        caption.innerHTML = svg('info') + '<span>' + msg + '</span>';
+        caption.classList.add('is-shown');
+        clearTimeout(capT);
+        capT = setTimeout(function () { caption.classList.remove('is-shown'); }, 4200);
+      }
+
+      // ================= элементы главного экрана =================
+      var screen = $('screen');
+      var smooth = $('smooth-button');
+      var returnBtn = $('return-button');
+      var startBtn = $('action-button');
+      var statusText = $('weld-status-text');
+      var degEl = $('dial-deg');
+      var subEl = $('dial-sub');
+      var panel = $('process-panel');
+      var alt = $('alt-screen');
+      var titleEl = $('screen-title');
+      var settingsBtn = $('settings-button');
+      var STATUS = {
+        ready: 'Готов к' + NBSP + 'работе', prepurge: 'Продувка газом…', warm: 'Прогрев…',
+        welding: 'Идёт сварка…', decay: 'Затухание дуги…', halt: 'Стоп', postpurge: 'Продувка…',
+        returning: 'Возврат в' + NBSP + '0…', done: 'Шов завершён', aborted: 'Сварка остановлена'
+      };
+
+      function weldAngle() {
+        if (S.phase === 'ready' || S.phase === 'prepurge' || S.phase === 'warm') return 0;
+        if (S.phase === 'done') return 360;
+        return Math.min(360, S.weldT / revTime(prog()) * 360);
+      }
+      function sectorOf(a) { return Math.min(nSec() - 1, Math.floor(a / (360 / nSec()))) + 1; }
+
+      // ---------- Шапка: кнопка программы, индикаторы, блокировка ----------
+      function syncHeader() {
+        var p = prog();
+        var pb = $('program-button');
+        pb.querySelector('.prog-name').innerHTML = '<span class="prog-code">' + p.code + '</span> ' + p.model;
+        pb.querySelector('.prog-size').innerHTML = '⌀&#8239;' + f1(p.d) + '&#8239;×&#8239;' + f1(p.t) + NB + 'мм';
+        pb.setAttribute('aria-label', 'Программа ' + p.code + ' ' + p.model);
+        $('gas-status').classList.toggle('is-bad', !gasOk());
+        $('gas-status').classList.toggle('is-busy', S.test.gas > 0);
+        $('water-status').classList.toggle('is-bad', !waterOk());
+        $('water-status').classList.toggle('is-busy', S.test.water > 0);
+        screen.classList.toggle('is-locked', S.screen === 'weld' && RUNNING.indexOf(S.phase) >= 0);
+        // Готовность: нет газа / воды / горелка не в нуле
+        var alert = '';
+        if (S.phase === 'ready') alert = !gasOk() ? 'gas' : !waterOk() ? 'water' : !torchZero() ? 'torch' : '';
+        if (alert) screen.setAttribute('data-alert', alert); else screen.removeAttribute('data-alert');
+        if (S.phase === 'ready') {
+          statusText.textContent = alert === 'gas' ? 'Нет давления газа' : alert === 'water' ? 'Нет протока воды'
+            : alert === 'torch' ? 'Горелка не' + NBSP + 'в' + NBSP + 'нуле' : STATUS.ready;
+          startBtn.classList.toggle('is-disabled', !!alert);
+          startBtn.querySelector('small').innerHTML = alert === 'gas' ? 'Нет давления газа' : alert === 'water' ? 'Нет протока охлаждения'
+            : alert === 'torch' ? 'Сначала верните горелку в' + NB + 'ноль' : 'Удерживайте 1' + NB + 'сек';
+        }
+        // переключатели панели презентера
+        document.querySelectorAll('#seg-head button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.head === headOf(prog().model)); });
+        document.querySelectorAll('#seg-speed button').forEach(function (b) { b.classList.toggle('is-on', +b.dataset.speed === S.speed); });
+        document.querySelectorAll('#seg-scn button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.scn === S.scn); });
+      }
+
+      // ================= Плашка главного экрана =================
+      var panelMode = '';
+      function chipsHTML() {
+        var c = prog().common, act = funcsAvail().filter(function (f) { return c[f.k]; });
+        var shown = act.slice(0, 2), rest = act.length - shown.length;
+        var more = rest > 0 ? '<button class="more" type="button" data-sheet="funcs" aria-label="Ещё ' + rest + '">+' + rest + '</button>'
+          : act.length ? '<button class="more" type="button" data-sheet="funcs" aria-label="Функции">' + svg('plus') + '</button>'
+          : '<button class="more more--wide" type="button" data-sheet="funcs">' + svg('plus') + 'Функции</button>';
+        return '<div class="pills">' + shown.map(function (f) {
+          return '<div class="pill">' + f.chip + '<button class="x" type="button" data-func="' + f.k + '" aria-label="Выключить «' + f.chip + '»">' + svg('x') + '</button></div>';
+        }).join('') + more + '</div>';
+      }
+      function readyHTML() {
+        var p = prog(), c = p.common, s = p.sec, n = c.sectors;
+        if (isOpen()) {
+          return '<h3>Режим сварки<span class="sp"></span><span class="tag">' + c.curMode + '</span><span class="tag tag--open">Открытая головка</span></h3>' +
+            '<div class="mode-grid">' +
+            '<div><label>Скорость сварки</label><div class="v">' + f2(avg(s.speed)) + NB + '<small>об/мин</small></div></div>' +
+            '<div><label>Время прохода, расч.</label><div class="v">' + mmss(revTime(p)) + NB + '<small>мин</small></div></div>' +
+            '<div><label>Напряжение (слежение)</label><div class="v">' + f1(avg(s.avcV)) + NB + '<small>В</small></div></div>' +
+            '<div><label>Ток импульса</label><div class="v">' + Math.max.apply(null, s.pulseHi) + NB + '<small>А</small></div></div>' +
+            '</div>' + chipsHTML();
+        }
+        return '<h3>Режим сварки<span class="sp"></span><span class="tag">' + c.curMode + '</span><span class="tag tag--closed">Закрытая головка</span></h3>' +
+          '<div class="mode-grid">' +
+          '<div><label>Ток по секторам</label><div class="v">' + s.pulseHi[0] + '–' + s.pulseHi[n - 1] + NB + '<small>А</small></div></div>' +
+          '<div><label>Время шва, расч.</label><div class="v">' + mmss(revTime(p)) + NB + '<small>мин</small></div></div>' +
+          '<div><label>Газ до</label><div class="v">' + fx(c.gasBefore, 0) + NB + '<small>сек</small></div></div>' +
+          '<div><label>Газ после</label><div class="v">' + fx(c.gasAfter, 0) + NB + '<small>сек</small></div></div>' +
+          '</div>' + chipsHTML();
+      }
+      function stepperHTML(key, label, top) {
+        var c = CORR[key];
+        return '<div class="stepper" style="top:' + top + 'px">' +
+          '<button class="pm" type="button" data-step="-1" data-key="' + key + '" aria-label="Меньше">' + svg(c.lr ? 'chevL' : 'minus') + '</button>' +
+          '<div class="sv" id="p-sv-' + key + '"><label>' + label + '</label><div class="num"><b id="p-corr-' + key + '">0</b><small>' + c.u + '</small></div></div>' +
+          '<button class="pm" type="button" data-step="1" data-key="' + key + '" aria-label="Больше">' + svg(c.lr ? 'chevR' : 'plus') + '</button>' +
+          '</div>';
+      }
+      function processHTML() {
+        var head = '<h3>Текущая сварка<span class="sp"></span><span class="panel-timer" id="p-tmr">00:00</span></h3>';
+        if (isOpen()) {
+          return head +
+            '<div class="live-grid">' +
+            '<div><label>Ск-ть сварки</label><div class="lv stack"><span id="p-rpm">0.00</span><small>об/мин</small></div></div>' +
+            '<div><label>Проволока</label><div class="lv stack"><span id="p-wire">0</span><small>мм/мин</small></div></div>' +
+            '<div><label>Напряжение</label><div class="lv"><i class="arc-dot off" id="p-dv"></i><span id="p-volt">0.0</span><small>В</small></div></div>' +
+            '<div><label>Ток</label><div class="lv"><i class="arc-dot off" id="p-da"></i><span id="p-cur">0</span><small>А</small></div></div>' +
+            '</div>' +
+            '<div class="corr-tabs">' + ['wire', 'cur', 'arc', 'spd', 'osc'].map(function (t) {
+              return '<button type="button" data-tab="' + t + '" class="' + (S.tab === t ? 'is-on' : '') + '">' + CORR[t].l + '</button>';
+            }).join('') + '</div>' +
+            stepperHTML(S.tab, CORR[S.tab].l, 218);
+        }
+        return head +
+          '<div class="live-closed">' +
+          '<div class="lv-row" style="top:87px"><label>Скорость сварки</label><div class="lv"><i class="arc-dot off" id="p-dr"></i><span id="p-rpm">0</span><small>об/мин</small></div></div>' +
+          '<div class="lv-row" style="top:170px"><label>Напряжение</label><div class="lv"><i class="arc-dot off" id="p-dv"></i><span id="p-volt">0.0</span><small>В</small></div></div>' +
+          '<div class="lv-row" style="top:253px"><label>Ток</label><div class="lv"><i class="arc-dot off" id="p-da"></i><span id="p-cur">0</span><small>А</small></div></div>' +
+          '</div>' +
+          stepperHTML('spd', 'Ск-ть', 127) + stepperHTML('cur', 'Ток', 243);
+      }
+      function summaryHTML() {
+        var m = S.sum || { time: 0, cur: 0, volt: 0, angle: 0 }, ok = S.completed, p = prog();
+        var title = ok ? 'Итоги сварки' : (S.err ? 'Сварка прервана' : 'Сварка остановлена');
+        var tag = ok ? '<span class="tag tag--ok">Шов завершён</span>' : '<span class="tag tag--err">на' + NB + Math.round(m.angle) + '°</span>';
+        return '<h3>' + title + '<span class="sp"></span>' + tag + '</h3>' +
+          '<div class="mode-grid">' +
+          '<div><label>Время сварки</label><div class="v">' + mmss(m.time) + NB + '<small>мин</small></div></div>' +
+          '<div><label>Программа</label><div class="v">' + p.code + NB + '<small>' + p.model + '</small></div></div>' +
+          '<div><label>Ток, средний</label><div class="v">' + (m.cur ? Math.round(m.cur) : '—') + NB + '<small>А</small></div></div>' +
+          '<div><label>Напряжение, ср.</label><div class="v">' + (m.volt ? f1(m.volt) : '—') + NB + '<small>В</small></div></div>' +
+          '</div>' +
+          (S.err ? '<div class="panel-error">' + svg('alert') + S.err.replace('Аварийная остановка: ', 'Причина: ') + '</div>' : '');
+      }
+      function renderPanel() {
+        var ph = S.phase;
+        var mode = ph === 'ready' ? 'ready' : (ph === 'done' || ph === 'aborted' || ph === 'returning') ? 'summary' : 'process';
+        panel.classList.toggle('is-summary', mode === 'summary');
+        panel.setAttribute('aria-label', mode === 'ready' ? 'Режим сварки' : mode === 'process' ? 'Текущая сварка' : 'Итоги сварки');
+        panel.innerHTML = mode === 'ready' ? readyHTML() : mode === 'process' ? processHTML() : summaryHTML();
+        panelMode = mode;
+        lastLive = 0;
+      }
+
+      // Живые показания — зависят от секции, коррекций и этапа
+      function live() {
+        var p = prog(), c = p.common, ph = S.phase, j = function (a) { return (Math.random() - 0.5) * a; };
+        var moving = ph === 'welding' || ph === 'decay';
+        var arc = ph === 'warm' || moving;
+        var k = ph === 'decay' ? Math.max(0, 1 - S.phaseT / Math.max(0.1, c.decay)) : 1;
+        var i = sectorOf(weldAngle()) - 1, cur = 0;
+        if (ph === 'warm') cur = c.warmCur + j(2);
+        else if (arc) cur = (c.curMode === 'Импульс' ? p.sec.pulseHi[i] : p.sec.base[i]) * (1 + S.corr.cur / 100) * k + j(2.5);
+        return {
+          arc: arc,
+          cur: Math.max(0, cur),
+          volt: arc ? (p.sec.avcV[i] + S.corr.arc + j(0.1)) * Math.max(k, 0.6) : 0,
+          rpm: moving ? p.sec.speed[i] * (1 + S.corr.spd / 100) * (isOpenP(p) ? 0.92 : 1) : 0,
+          wire: moving ? p.sec.wire[i] * (1 + S.corr.wire / 100) * k : 0
+        };
+      }
+      var lastLive = 0;
+      function syncPanel(now) {
+        if (panelMode !== 'process') return;
+        setText('p-tmr', mmss0(S.weldT));
+        Object.keys(CORR).forEach(function (key) {
+          var b = $('p-corr-' + key); if (!b) return;
+          var c = CORR[key], v = S.corr[key];
+          setText('p-corr-' + key, v === 0 ? fx(0, c.d) : signed(v, c.d));
+          $('p-sv-' + key).classList.toggle('is-changed', v !== 0);
+        });
+        if (now - lastLive < 280) return;                  // показания обновляются ~3 раза в секунду
+        lastLive = now;
+        var L = live(), ph = S.phase;
+        setText('p-rpm', isOpen() ? f2(L.rpm) : String(Math.round(L.rpm)));
+        setText('p-wire', String(Math.round(L.wire)));
+        setText('p-volt', f1(L.volt));
+        setText('p-cur', String(Math.round(L.cur)));
+        var dotCls = 'arc-dot ' + (L.arc ? (ph === 'decay' || ph === 'warm' ? 'warn' : '') : 'off');
+        ['p-dv', 'p-da'].forEach(function (id) { var e = $(id); if (e) e.className = dotCls; });
+        var dr = $('p-dr'); if (dr) dr.className = 'arc-dot ' + (ph === 'welding' || ph === 'decay' ? '' : 'off');
+      }
+
+      // Клики в плашке: функции, вкладки, коррекции (с удержанием)
+      panel.addEventListener('click', function (e) {
+        var x = e.target.closest('[data-func]');
+        if (x) { prog().common[x.dataset.func] = false; renderPanel(); return; }
+        if (e.target.closest('[data-sheet]')) { openSheet('funcs'); return; }
+        var t = e.target.closest('[data-tab]');
+        if (t) { S.tab = t.dataset.tab; renderPanel(); }
+      });
+      function corrStep(key, d) {
+        var c = CORR[key];
+        S.corr[key] = Math.max(-c.lim, Math.min(c.lim, Math.round((S.corr[key] + d * c.step()) * 100) / 100));
+      }
+
+      // ================= Удержание с автоповтором (коррекции и ручной режим) =================
+      var holdT = null, holdI = null, holdEl = null;
+      function holdStep(el) {
+        var kind = el.dataset.hold, d = +el.dataset.d || 0, k = el.dataset.key;
+        if (kind === 'corr') corrStep(k, d);
+        if (kind === 'jog') { var step = k === 'cur' || k === 'spd' ? 1 : 0.5; S.jog[k] = Math.max(-50, Math.min(50, Math.round((S.jog[k] + d * step) * 10) / 10)); }
+        if (kind === 'rot') S.torch = Math.round((S.torch + d * (holdI ? 3 : 1)) * 10) / 10;
+        if (kind === 'retract') S.jog.wire = Math.max(-50, Math.round((S.jog.wire - 0.5) * 10) / 10);
+      }
+      function holdEnd() {
+        clearTimeout(holdT); clearInterval(holdI); holdT = holdI = null;
+        if (holdEl) {
+          holdEl.classList.remove('is-held');
+          if (holdEl.dataset.hold === 'retract') { var t = $('rt-txt'); if (t) t.innerHTML = 'Оттяжка<br>проволоки'; }
+        }
+        holdEl = null;
+      }
+      screen.addEventListener('pointerdown', function (e) {
+        var el = e.target.closest('[data-hold]');
+        if (!el) {
+          var st = e.target.closest('[data-step]');
+          if (!st) return;
+          st.dataset.hold = 'corr'; st.dataset.d = st.dataset.step;
+          el = st;
+        }
+        holdEl = el; el.classList.add('is-held'); holdStep(el);
+        if (el.dataset.hold === 'retract') { var t = $('rt-txt'); if (t) t.textContent = 'Оттяжка…'; }
+        holdT = setTimeout(function () { holdI = setInterval(function () { holdStep(el); }, 70); }, 380);
+      });
+      ['pointerup', 'pointercancel'].forEach(function (t) { document.addEventListener(t, holdEnd); });
+      screen.addEventListener('pointerleave', holdEnd);
+
+      // ================= Этапы процесса =================
+      function go(phase) {
+        var prev = S.phase;
+        S.phase = phase;
+        S.phaseT = 0;
+        S.phaseR = 0;
+        screen.setAttribute('data-weld', phase);
+        screen.toggleAttribute('data-soft', S.soft);   // остановлено плавно — без красного
+        statusText.textContent = phase === 'aborted' && S.err ? 'Аварийная остановка' : STATUS[phase];
+        smooth.classList.toggle('is-dim', phase === 'decay');
+        // Синяя кнопка: «Вернуть горелку в ноль» (нажимается) или «Возврат в 0…» (тусклая)
+        returnBtn.textContent = phase === 'returning' ? 'Возврат в' + NBSP + '0…' : 'Вернуть горелку в' + NBSP + 'ноль';
+        returnBtn.classList.toggle('is-dim', phase === 'returning');
+        gauge.setDone(phase === 'done');               // шов готов — шкала зеленеет
+        gauge.setPurge(phase === 'prepurge' || phase === 'postpurge');   // продувка — синяя шкала
+        // Красная шкала со вспышками: «Стоп» и итог жёсткой остановки; плавная остановка — без красного
+        gauge.setAlarm(phase === 'halt' || (phase === 'aborted' && !S.soft));
+        // Итоги считаются при окончании продувки (готово или остановлено)
+        if ((phase === 'done' || phase === 'aborted') && prev === 'postpurge') finishSummary();
+        renderPanel();
+        syncHeader();
+      }
+      function finishSummary() {
+        var a = S.acc;
+        S.sum = { time: S.weldT, cur: a.n ? a.cur / a.n : 0, volt: a.n ? a.volt / a.n : 0, angle: S.completed ? 360 : S.stopAngle };
+      }
+      function startWeld() {
+        if (S.phase !== 'ready' || !gasOk() || !waterOk() || !torchZero()) return;
+        S.weldT = 0; S.completed = false; S.torch = 0; S.soft = false; S.err = null;
+        S.corr = { wire: 0, cur: 0, arc: 0, spd: 0, osc: 0 };
+        S.acc = { n: 0, cur: 0, volt: 0 };
+        go('prepurge');
+      }
+      function stopNow() {
+        if (S.phase === 'prepurge' || S.phase === 'warm') { go('ready'); note('Запуск отменён до начала сварки'); return; }
+        // «СТОП»: сначала статус «Стоп» (красный), затем продувка
+        if (S.phase === 'welding' || S.phase === 'decay') {
+          S.stopAngle = weldAngle(); S.soft = false; go('halt');
+          note('СТОП: дуга погашена сразу, затем продувка газом');
+          return;
+        }
+        if (S.phase === 'postpurge') note('Идёт продувка после сварки — защищает шов от' + NBSP + 'окисления');
+      }
+      function smoothStop() {
+        if (S.phase === 'prepurge' || S.phase === 'warm') { go('ready'); note('Запуск отменён до начала сварки'); return; }
+        if (S.phase === 'welding') {
+          S.soft = true; go('decay');                  // плавно — без красного
+          note('Плавное гашение: ток снижается за' + NBSP + 'время затухания (' + f1(prog().common.decay) + NBSP + 'с)');
+          return;
+        }
+        if (S.phase === 'postpurge') note('Идёт продувка после сварки — защищает шов от' + NBSP + 'окисления');
+      }
+      function errorStop(msg) {
+        S.err = msg; S.stopAngle = weldAngle(); S.completed = false; S.soft = false;
+        finishSummary();
+        go('aborted');
+        note(msg);
+      }
+      function returnZero() {
+        if (S.phase === 'aborted' || S.phase === 'done') {
+          S.torch = S.phase === 'done' ? 0 : S.stopAngle;
+          go(S.torch === 0 ? 'ready' : 'returning');
+          return;
+        }
+        if (S.phase === 'ready') {
+          if (torchZero()) return;
+          S.torch = norm(S.torch);
+          go('returning');
+        }
+      }
+
+      var last = performance.now();
+      function tick(now) {
+        var dtR = Math.min(0.1, (now - last) / 1000); last = now;
+        var dt = dtR * S.speed, c = prog().common, p = prog();
+        S.phaseT += dt;
+        S.phaseR += dtR * 1000;
+        ['gas', 'water'].forEach(function (k) {
+          if (S.test[k] > 0) { S.test[k] -= dtR; if (S.test[k] <= 0) { S.test[k] = 0; if (S.screen === 'manual') renderScreen(); syncHeader(); } }
+        });
+        if (['prepurge', 'warm', 'welding', 'decay'].indexOf(S.phase) >= 0 && (!gasOk() || !waterOk()))
+          errorStop(!gasOk() ? 'Аварийная остановка: нет давления газа' : 'Аварийная остановка: нет протока охлаждения');
+        switch (S.phase) {
+          case 'prepurge': if (S.phaseT >= c.gasBefore) go(c.warmTime > 0 ? 'warm' : 'welding'); break;
+          case 'warm':     if (S.phaseT >= c.warmTime) go('welding'); break;
+          case 'welding':
+            S.weldT += dt;
+            (function () { var L = live(); if (L.arc) { S.acc.n++; S.acc.cur += L.cur; S.acc.volt += L.volt; } })();
+            if (S.weldT >= revTime(p)) { S.weldT = revTime(p); S.completed = true; go('decay'); }
+            break;
+          case 'decay':
+            if (!S.completed) S.weldT += dt * 0.5;        // при плавной остановке горелка ещё немного едет
+            if (S.phaseT >= c.decay) { S.stopAngle = weldAngle(); go('postpurge'); }
+            break;
+          case 'halt':     if (S.phaseR >= HALT_MS) go('postpurge'); break;
+          case 'postpurge':
+            if (S.phaseT >= c.gasAfter) {
+              go(S.completed ? 'done' : 'aborted');
+              // Возврат в 0 после сварки включён в программе — запускается сам
+              if (!S.completed && c.ret0) setTimeout(function () {
+                if (S.phase === 'aborted') { returnZero(); note('Возврат в' + NBSP + 'точку 0 после сварки включён в' + NBSP + 'программе'); }
+              }, 900);
+            }
+            break;
+          case 'returning':
+            S.torch = Math.max(0, S.torch - c.retSpeed * 0.6 * dtR);
+            if (S.torch <= 0) { S.torch = 0; go('ready'); }
+            break;
+        }
+        sync();
+        syncPanel(now);
+        requestAnimationFrame(tick);
+      }
+
+      // Круговая диаграмма и показания в центре; ручной режим — значения
+      var lastDeg = '', lastSub = '';
+      function sync() {
+        var ph = S.phase, ang = 0, sub = '', deg;
+        if (ph === 'ready') { sub = torchZero() ? 'Горелка на' + NBSP + 'нуле' : 'Горелка не' + NBSP + 'на' + NBSP + 'нуле'; }
+        else if (ph === 'prepurge') sub = 'Газ до: ' + Math.max(0, Math.ceil(prog().common.gasBefore - S.phaseT)) + NBSP + 'с';
+        else if (ph === 'warm') sub = 'Прогрев: ' + Math.max(0, Math.ceil(prog().common.warmTime - S.phaseT)) + NBSP + 'с';
+        else if (ph === 'welding' || ph === 'decay') { ang = weldAngle(); sub = 'Секция ' + sectorOf(ang) + ' из ' + nSec(); }
+        else if (ph === 'halt') { ang = S.stopAngle; sub = 'Стоп'; }
+        else if (ph === 'postpurge') { ang = S.stopAngle; sub = 'Секция ' + sectorOf(Math.min(359.9, ang)) + ' из ' + nSec(); }
+        else if (ph === 'done') { ang = 360; sub = 'Шов готов'; }
+        else if (ph === 'aborted') { ang = S.stopAngle; sub = 'Остановлено'; }
+        else if (ph === 'returning') { ang = S.torch; sub = 'Возврат в' + NBSP + '0'; }
+
+        gauge.setValue(ang / 360, 0);                    // лава показывает пройденный угол
+        deg = Math.round(ph === 'ready' || ph === 'returning' ? S.torch : ang) + '°';
+        if (deg !== lastDeg) { degEl.textContent = deg; lastDeg = deg; }
+        if (sub !== lastSub) { subEl.textContent = sub; lastSub = sub; }
+        if (ph === 'ready' && screen.hasAttribute('data-alert') !== !(torchZero() && gasOk() && waterOk())) syncHeader();
+
+        if (S.screen === 'manual') {
+          setText('abs-ang', Math.round(norm(S.absBase + S.torch)) + '°');
+          var rv = $('rot-v');
+          if (rv) { var v = norm(S.torch + 180) - 180; rv.querySelector('b').textContent = (Math.abs(v) >= 99.95 ? Math.round(v) : f1(v)) + '°'; }
+          Object.keys(S.jog).forEach(function (k) {
+            var e = $('j-' + k); if (!e) return;
+            var v = S.jog[k];
+            e.classList.toggle('is-changed', Math.abs(v) > 1e-6);
+            e.querySelector('b').textContent = f1(v);
+          });
+          var spdSub = $('sub-spd'); if (spdSub) spdSub.textContent = f2(0.5 * (1 + S.jog.spd / 100)) + NBSP + 'об/мин';
+          setText('tg-txt', S.test.gas > 0 ? 'Газ подаётся… ' + Math.ceil(S.test.gas) : 'Тест газа');
+          setText('tw-txt', S.test.water > 0 ? 'Проток… ' + Math.ceil(S.test.water) : 'Тест охлаждения');
+        }
+      }
+
+      // ================= Экраны =================
+      function setScreen(name) {
+        S.screen = name;
+        renderScreen();
+      }
+      function renderScreen() {
+        screen.setAttribute('data-screen', S.screen);
+        titleEl.hidden = S.screen !== 'manual' && S.screen !== 'weld';
+        titleEl.textContent = S.screen === 'manual' ? 'Ручной режим' : S.screen === 'weld' ? 'Сварка' : '';
+        settingsBtn.classList.toggle('is-open', S.screen === 'editor' && S.ed && S.ed.unlocked);
+        settingsBtn.setAttribute('aria-label', S.screen === 'editor' ? 'Параметры программы' : 'Ручной режим');
+        alt.innerHTML = S.screen === 'manual' ? manualHTML() : S.screen === 'programs' ? programsHTML() : S.screen === 'editor' ? editorHTML() : '';
+        alt.querySelectorAll('.bt--green, .bt--blue, .blue-btn').forEach(addRipple);
+        syncHeader();
+        sync();
+      }
+
+      // ---------- Ручной режим ----------
+      function manualHTML() {
+        var o = isOpen();
+        var w = o ? 312 : 318;
+        function val(id, u) { return '<div class="val" id="' + id + '"><b>0.0</b><small>' + u + '</small></div>'; }
+        function pmBtn(attrs, icon) { return '<button class="pm-btn" type="button" ' + attrs + '>' + svg(icon) + '</button>'; }
+        var rot = '<div class="mcard" style="left:20px;top:116px;width:' + w + 'px;height:270px">' +
+          '<h4>Вращение<span id="abs-ang">74°</span></h4>' +
+          '<div class="row">' + pmBtn('data-hold="rot" data-d="-1" aria-label="Назад"', 'ccw') +
+          '<div class="val" id="rot-v"><b>0.0°</b></div>' + pmBtn('data-hold="rot" data-d="1" aria-label="Вперёд"', 'cw') + '</div>' +
+          '<button class="blue-btn" type="button" data-a="zero">Сбросить в' + NB + 'ноль</button></div>';
+        var tests = '<button class="mtile-btn' + (S.test.gas > 0 ? ' is-on' : '') + '" type="button" style="left:20px;top:402px;width:' + w + 'px;height:80px" data-a="test-gas">' + svg('gas') + '<span id="tg-txt">Тест газа</span></button>' +
+          '<button class="mtile-btn' + (S.test.water > 0 ? ' is-on' : '') + '" type="button" style="left:20px;top:498px;width:' + w + 'px;height:80px" data-a="test-water">' + svg('drop') + '<span id="tw-txt">Тест охлаждения</span></button>';
+        function card(x, y, cw, ch, title, key, u, lr, sub) {
+          return '<div class="mcard" style="left:' + x + 'px;top:' + y + 'px;width:' + cw + 'px;height:' + ch + 'px">' +
+            '<h4>' + title + '</h4>' + (sub ? '<div class="sub" id="sub-' + key + '">' + sub + '</div>' : '') +
+            '<div class="row" style="' + (sub ? 'margin-top:52px' : '') + '">' + pmBtn('data-hold="jog" data-key="' + key + '" data-d="-1" aria-label="Меньше"', lr ? 'chevL' : 'minus') +
+            val('j-' + key, u) + pmBtn('data-hold="jog" data-key="' + key + '" data-d="1" aria-label="Больше"', lr ? 'chevR' : 'plus') + '</div></div>';
+        }
+        function tile(x, y, tw, th, col, a, icon, text) {
+          return '<button class="mtile-btn' + (col ? ' mtile-btn--col' : '') + '" type="button" style="left:' + x + 'px;top:' + y + 'px;width:' + tw + 'px;height:' + th + 'px" data-a="' + a + '">' + svg(icon) + text + '</button>';
+        }
+        var body;
+        if (o) {
+          body = card(348, 116, 320, 168, 'Проволока', 'wire', 'мм', true) + card(684, 116, 320, 168, 'Колебания', 'osc', 'мм', true) +
+            card(348, 302, 320, 170, 'Длина дуги', 'arc', 'мм', false) + card(684, 302, 320, 170, 'Ток', 'cur', '%', false) +
+            '<button class="mtile-btn" type="button" style="left:348px;top:488px;width:320px;height:90px" data-hold="retract">' + svg('retract') + '<span id="rt-txt">Оттяжка<br>проволоки</span></button>' +
+            tile(684, 488, 152, 90, true, 'standby', 'moon', 'Ожидание') + tile(852, 488, 152, 90, true, 'funcs', 'sliders', 'Функции');
+        } else {
+          body = card(354, 116, 316, 270, 'Скорость вращения', 'spd', '%', false, f2(0.5) + NB + 'об/мин') + card(687, 116, 317, 270, 'Ток', 'cur', '%', false, NB) +
+            tile(354, 402, 316, 92, false, 'standby', 'moon', 'Ожидание') + tile(687, 402, 317, 92, false, 'funcs', 'sliders', 'Функции');
+        }
+        return rot + tests + body;
+      }
+
+      // ---------- Место сохранения ----------
+      function rng(a) { var hi = Math.max.apply(null, a), lo = Math.min.apply(null, a); return hi === lo ? String(hi) : a[0] + '–' + a[a.length - 1]; }
+      function programsHTML() {
+        var rows = [];
+        for (var s = 1; s <= SLOTS; s++) {
+          var pp = S.progs.filter(function (x) { return x.slot === s; })[0];
+          rows.push(pp ? '<button class="pcard' + (pp.id === S.pSel ? ' is-sel' : '') + '" type="button" data-a="psel" data-id="' + pp.id + '"><span class="slot">' + s + '</span>' +
+            '<span class="nm"><b><span>' + pp.code + '</span> ' + pp.model + '</b><small>⌀&#8239;' + f1(pp.d) + '&#8239;×&#8239;' + f1(pp.t) + NB + 'мм · ' + (isOpenP(pp) ? 'открытая' : 'закрытая') + ' головка</small></span>' +
+            (pp.id === S.progId ? '<span class="loaded">загружена</span>' : '') + '</button>'
+            : '<div class="pcard is-empty"><span class="slot">' + s + '</span>Свободная ячейка</div>');
+        }
+        var p = S.progs.filter(function (x) { return x.id === S.pSel; })[0] || prog(), o = isOpenP(p), sc = p.sec, c = p.common, n = c.sectors;
+        var loaded = p.id === S.progId, busy = RUNNING.indexOf(S.phase) >= 0;
+        return '<div class="screen-title">Место сохранения</div>' +
+          '<div class="plist">' + rows.join('') + '</div>' +
+          '<div class="pdet"><h5><span class="pname"><span>' + p.code + '</span> ' + p.model + '</span><span class="tag ' + (o ? 'tag--open' : 'tag--closed') + '">' + (o ? 'Открытая' : 'Закрытая') + ' головка</span></h5>' +
+          '<div class="pinfo">Ячейка ' + p.slot + ' · труба ⌀&#8239;' + f1(p.d) + NB + 'мм, стенка ' + f1(p.t) + NB + 'мм · ' + n + ' ' + plural(n, 'сектор', 'сектора', 'секторов') + '</div>' +
+          '<div class="pg">' +
+          '<div><label>Ток высокого импульса</label><b>' + rng(sc.pulseHi) + NB + '<small>А</small></b></div>' +
+          '<div><label>Рабочий ток</label><b>' + rng(sc.base) + NB + '<small>А</small></b></div>' +
+          '<div><label>Скорость сварки</label><b>' + fx(avg(sc.speed), speedDec(p)) + NB + '<small>об/мин</small></b></div>' +
+          '<div><label>Продувка до / после</label><b>' + fx(c.gasBefore, 0) + ' / ' + fx(c.gasAfter, 0) + NB + '<small>с</small></b></div>' +
+          '<div><label>Прогрев</label><b>' + c.warmCur + NB + '<small>А · ' + f1(c.warmTime) + NB + 'с</small></b></div>' +
+          '<div><label>Затухание</label><b>' + f1(c.decay) + NB + '<small>с</small></b></div>' +
+          '</div>' +
+          '<div class="btns">' +
+          '<button class="bt bt--line" type="button" style="flex:1" data-a="edit">Параметры</button>' +
+          '<button class="bt bt--green' + (loaded || busy ? ' is-off' : '') + '" type="button" style="flex:1.3" data-a="pload">' + (loaded ? 'Загружена' : 'Загрузить') + '</button>' +
+          '</div></div>';
+      }
+
+      // ---------- Редактор программы ----------
+      function edProg() { return S.ed.draft; }
+      function edTabs() { return ETABS.filter(function (t) { return !t.open || isOpenP(edProg()); }); }
+      function isChg(kind, key, i) {
+        var a = S.progs.filter(function (x) { return x.id === S.ed.id; })[0], b = edProg();
+        if (kind === 's') return a.sec[key][i] !== b.sec[key][i];
+        if (kind === 'm') return a[key] !== b[key];
+        return a.common[key] !== b.common[key];
+      }
+      function chgCount() {
+        var a = S.progs.filter(function (x) { return x.id === S.ed.id; })[0], b = edProg(), n = 0;
+        Object.keys(b.sec).forEach(function (k) { b.sec[k].forEach(function (v, i) { if (a.sec[k][i] !== v) n++; }); });
+        Object.keys(b.common).forEach(function (k) { if (a.common[k] !== b.common[k]) n++; });
+        ['model', 'd', 't'].forEach(function (k) { if (a[k] !== b[k]) n++; });
+        return n;
+      }
+      function ringSVG(n, sel) {
+        var C = 130, R = 96, W = 30, parts = [];
+        function pt(a, r) { return [C + r * Math.sin(a * Math.PI / 180), C - r * Math.cos(a * Math.PI / 180)]; }
+        for (var i = 0; i < n; i++) {
+          var a0 = 360 / n * i + 1.5, a1 = 360 / n * (i + 1) - 1.5, p0 = pt(a0, R), p1 = pt(a1, R), big = (a1 - a0) > 180 ? 1 : 0;
+          var on = sel === -1 || sel === i;
+          parts.push('<path d="M' + p0[0] + ' ' + p0[1] + 'A' + R + ' ' + R + ' 0 ' + big + ' 1 ' + p1[0] + ' ' + p1[1] + '" stroke="' + (on ? '#0070E3' : '#E2EAEF') + '" stroke-width="' + W + '" fill="none" data-a="esec" data-id="' + i + '" style="cursor:pointer"/>');
+          var lp = pt(360 / n * (i + 0.5), R);
+          parts.push('<text x="' + lp[0] + '" y="' + (lp[1] + 6) + '" text-anchor="middle" font-size="17" font-weight="600" fill="' + (on ? '#FFFFFF' : '#7A8B98') + '" pointer-events="none">' + (i + 1) + '</text>');
+        }
+        parts.push('<polygon points="' + (C - 9) + ',' + (C - R - W / 2 - 16) + ' ' + (C + 9) + ',' + (C - R - W / 2 - 16) + ' ' + C + ',' + (C - R - W / 2 - 2) + '" fill="#0070E3"/>');
+        return '<svg width="250" height="250" viewBox="0 0 260 260">' + parts.join('') + '<circle cx="' + C + '" cy="' + C + '" r="' + (R - W / 2 - 8) + '" fill="#F2F6F9"/>' +
+          '<text x="' + C + '" y="' + (C - 4) + '" text-anchor="middle" font-size="15" fill="#A1ABB5">точка 0 — верх</text><text x="' + C + '" y="' + (C + 20) + '" text-anchor="middle" font-size="15" fill="#A1ABB5">по часовой</text></svg>';
+      }
+      function editorHTML() {
+        var e = S.ed, p = edProg(), n = p.common.sectors, o = isOpenP(p);
+        var tab = edTabs().filter(function (t) { return t.id === e.tab; })[0] || edTabs()[0];
+        var cols = '236px repeat(' + n + ',1fr)';
+        var rows = tab.rows.filter(function (r) { return r[0] === 'g' || !(r[0] === 's' ? SEC[r[1]] : COM[r[1]]).open || o; });
+        if (tab.id !== 'com') {
+          var secR = rows.filter(function (r) { return r[0] === 's'; }), comR = rows.filter(function (r) { return r[0] === 'c'; });
+          rows = comR.length ? secR.concat([['g', 'Общие для всех секторов', 'all']], comR) : secR;
+        }
+        var body = rows.map(function (r) {
+          var k = r[0], key = r[1];
+          if (k === 'g') return '<div class="grp' + (tab.id !== 'com' ? ' all' : '') + '">' + (tab.id !== 'com' ? svg('link') : '') + key + '</div>';
+          if (k === 's') {
+            var d = SEC[key];
+            return '<div class="tr" style="grid-template-columns:' + cols + '"><div class="lb">' + d.l + '<small>' + d.u + '</small></div>' +
+              p.sec[key].map(function (v, i) {
+                return '<div class="cell' + (i === e.sec ? ' is-sel' : '') + (isChg('s', key, i) ? ' is-chg' : '') + '" data-a="ecell" data-k="s" data-key="' + key + '" data-i="' + i + '">' + fx(v, key === 'speed' ? speedDec(p) : d.dec) + '</div>';
+              }).join('') + '</div>';
+          }
+          var dc = COM[key], v = p.common[key];
+          var inner = dc.type === 'bool' ? '<i class="switch' + (v ? ' is-on' : '') + '"></i><small>' + (v ? 'ВКЛ' : 'ВЫКЛ') + '</small>'
+            : dc.type === 'enum' ? '<span class="enumsw">' + dc.opts.map(function (x) { return '<span class="' + (x === v ? 'is-on' : '') + '">' + x + '</span>'; }).join('') + '</span>'
+            : fx(v, dc.dec) + ' <small>' + dc.u + '</small>';
+          return '<div class="tr' + (tab.id !== 'com' ? ' com' : '') + '" style="grid-template-columns:' + cols + '"><div class="lb">' + dc.l + '</div>' +
+            '<div class="cell span' + (isChg('c', key) ? ' is-chg' : '') + '" style="grid-column:2 / span ' + n + '" data-a="ecell" data-k="c" data-key="' + key + '">' + inner + '</div></div>';
+        }).join('');
+        var secHead = tab.id === 'com' ? '<div style="grid-column:2 / span ' + n + ';padding-left:16px">Значение для всей программы</div>'
+          : Array.apply(null, { length: n }).map(function (_, i) { return '<button type="button" class="' + (i === e.sec ? 'is-sel' : '') + '" data-a="esec" data-id="' + i + '">' + (n > 4 ? 'С' : 'Сектор ') + (i + 1) + '</button>'; }).join('');
+        var ringSel = tab.id === 'com' ? -1 : e.sec, a0 = Math.round(360 / n * e.sec), a1 = Math.round(360 / n * (e.sec + 1));
+        var changedM = ['model', 'd', 't'].some(function (k) { return isChg('m', k); });
+        return '<div class="screen-title2"><b>Программа ' + p.code + '</b><small>' + p.model + ' · ⌀&#8239;' + f1(p.d) + '&#8239;×&#8239;' + f1(p.t) + NB + 'мм · ячейка ' + p.slot + (changedM ? ' · изменено' : '') + '</small></div>' +
+          '<div class="edit-tip" id="edit-tip">' + (e.unlocked ? 'Нажмите, чтобы открыть модель и' + NB + 'трубу' : 'Нажмите шестерёнку, чтобы изменить программу') + '</div>' +
+          '<div class="ring-card">' + ringSVG(n, ringSel) + '<div class="ring-cap">' + (tab.id === 'com' ? '<b>Вся программа</b><small>' + n + ' ' + plural(n, 'сектор', 'сектора', 'секторов') + ' по ' + Math.round(360 / n) + '°</small>' : '<b>Сектор ' + (e.sec + 1) + '</b><small>' + a0 + '°–' + a1 + '°</small>') + '</div></div>' +
+          '<div class="etabs">' + edTabs().map(function (t) { return '<button type="button" class="' + (t.id === tab.id ? 'is-on' : '') + '" data-a="etab" data-id="' + t.id + '">' + t.l + '</button>'; }).join('') + '</div>' +
+          '<div class="etbl' + (e.unlocked ? '' : ' is-ro') + '"><div class="thead" style="grid-template-columns:' + cols + '"><div style="padding-left:20px">Параметр</div>' + secHead + '</div><div class="tbody">' + body + '</div></div>' +
+          '<div id="efoot">' + footHTML() + '</div>';
+      }
+      function footHTML() {
+        var cnt = chgCount();
+        return '<button class="bt bt--ghost efoot' + (cnt ? '' : ' is-off') + '" type="button" style="left:348px;width:212px" data-a="ediscard">Отменить</button>' +
+          '<button class="bt bt--green efoot' + (cnt ? '' : ' is-off') + '" type="button" style="left:576px;width:428px" data-a="esave">Сохранить' + (cnt ? ' · ' + cnt + ' ' + plural(cnt, 'изменение', 'изменения', 'изменений') : '') + '</button>';
+      }
+      function refreshFoot() { var f = $('efoot'); if (f) { f.innerHTML = footHTML(); f.querySelectorAll('.bt--green').forEach(addRipple); } }
+      var tipT;
+      function showTip() { var t = $('edit-tip'); if (!t) return; t.classList.add('is-shown'); clearTimeout(tipT); tipT = setTimeout(function () { t.classList.remove('is-shown'); }, 2600); }
+      function openEditor(id) {
+        var p = S.progs.filter(function (x) { return x.id === id; })[0];
+        S.ed = { id: id, draft: clone(p), tab: 'cur', sec: 0, unlocked: false };
+        setScreen('editor');
+      }
+      function editorTap(kind, key, i, el) {
+        if (!S.ed.unlocked) {
+          settingsBtn.classList.remove('is-nudge'); void settingsBtn.offsetWidth; settingsBtn.classList.add('is-nudge');
+          showTip();
+          return;
+        }
+        var p = edProg();
+        if (kind === 'c') {
+          var d = COM[key];
+          if (d.type === 'bool') {
+            var v = p.common[key] = !p.common[key];
+            el.querySelector('.switch').classList.toggle('is-on', v); el.querySelector('small').textContent = v ? 'ВКЛ' : 'ВЫКЛ';
+            el.classList.toggle('is-chg', isChg('c', key)); refreshFoot(); return;
+          }
+          if (d.type === 'enum') {
+            var opts = d.opts, nv = p.common[key] = opts[(opts.indexOf(p.common[key]) + 1) % opts.length];
+            el.querySelectorAll('.enumsw span').forEach(function (x) { x.classList.toggle('is-on', x.textContent === nv); });
+            el.classList.toggle('is-chg', isChg('c', key)); refreshFoot(); return;
+          }
+          openKeypad({ kind: 'c', key: key, title: d.l, sub: 'Общий параметр программы', u: d.u, min: d.min, max: d.max, dec: d.dec, cur: p.common[key] });
+          return;
+        }
+        var ds = SEC[key], dec = key === 'speed' ? speedDec(p) : ds.dec;
+        S.ed.sec = i;
+        openKeypad({ kind: 's', key: key, i: i, title: ds.l, sub: 'Сектор ' + (i + 1) + ' из ' + p.common.sectors, u: ds.u, min: ds.min, max: ds.max, dec: dec, cur: p.sec[key][i] });
+      }
+      function resizeSectors(p, n) {
+        Object.keys(p.sec).forEach(function (key) { var a = p.sec[key]; while (a.length < n) a.push(a[a.length - 1]); a.length = n; });
+        if (S.ed.sec >= n) S.ed.sec = n - 1;
+      }
+      function saveEditor() {
+        var i = S.progs.findIndex(function (x) { return x.id === S.ed.id; }), n = chgCount();
+        S.progs[i] = clone(edProg()); S.ed.draft = clone(S.progs[i]);
+        if (S.progs[i].id === S.progId && S.phase === 'ready') { S.corr = { cur: 0, arc: 0, osc: 0, wire: 0, spd: 0 }; renderPanel(); }
+        note('Программа ' + S.progs[i].code + ' сохранена в' + NBSP + 'ячейку ' + S.progs[i].slot + ': ' + n + ' ' + plural(n, 'изменение', 'изменения', 'изменений'));
+      }
+
+      // ================= Окна (листы) =================
+      var veil = null;
+      function openKeypad(o) {
+        S.kp = Object.assign(o, { buf: fx(o.cur, o.dec), was: fx(o.cur, o.dec) + (o.u ? ' ' + o.u : ''), fresh: true, back: S.sheet === 'model' ? 'model' : null });
+        openSheet('keypad');
+      }
+      function sheetHTML() {
+        if (S.sheet === 'funcs') {
+          var c = prog().common;
+          return '<div class="sheet" role="dialog" aria-label="Функции">' +
+            '<h2><div>Функции<small>Переключатели программы ' + prog().code + '</small></div></h2>' +
+            '<div class="func-list">' + funcsAvail().map(function (f) {
+              return '<button class="func-card' + (c[f.k] ? ' is-on' : '') + '" type="button" data-toggle="' + f.k + '" aria-pressed="' + !!c[f.k] + '"><div>' + f.l +
+                (f.hint ? '<small>' + f.hint + '</small>' : '') + '</div><i class="switch' + (c[f.k] ? ' is-on' : '') + '"></i></button>';
+            }).join('') + '</div>' +
+            '<button class="sheet-done" type="button" data-close>Готово</button></div>';
+        }
+        if (S.sheet === 'keypad') {
+          var k = S.kp, v = parseFloat(k.buf), bad = k.buf === '' || isNaN(v) || v < k.min || v > k.max;
+          var keys = ['7', '8', '9', '⌫', '4', '5', '6', 'Сброс', '1', '2', '3', '±', '0', '.', '', ''];
+          return '<div class="sheet" role="dialog" style="width:520px">' +
+            '<h2><div>' + k.title + '<small>' + k.sub + '</small></div></h2>' +
+            '<div class="kp-disp"><b class="' + (bad && k.buf !== '' ? 'is-err' : '') + '">' + (k.buf === '' ? '—' : k.buf) + '</b><span>' + k.u + '</span></div>' +
+            '<div class="kp-lim"><span>MIN ' + fx(k.min, k.dec) + ' · MAX ' + fx(k.max, k.dec) + '</span>' + (bad && k.buf !== '' ? '<span class="e">Вне допустимого диапазона</span>' : '<span>было ' + k.was + '</span>') + '</div>' +
+            '<div class="keys">' + keys.map(function (x) { return x === '' ? '<span></span>' : '<button type="button" class="' + (/[0-9.]/.test(x) ? '' : 'fn') + '" data-key-in="' + x + '">' + x + '</button>'; }).join('') + '</div>' +
+            '<div class="kp-act">' + (k.kind === 's'
+              ? '<button class="bt bt--line' + (bad ? ' is-off' : '') + '" type="button" data-kp="all">Во все секторы</button><button class="bt bt--blue' + (bad ? ' is-off' : '') + '" type="button" data-kp="one">В сектор ' + (k.i + 1) + '</button>'
+              : '<button class="bt bt--ghost" type="button" data-close>Отмена</button><button class="bt bt--blue' + (bad ? ' is-off' : '') + '" type="button" data-kp="one">Применить</button>') + '</div></div>';
+        }
+        if (S.sheet === 'model') {
+          var pm = edProg();
+          return '<div class="sheet" role="dialog" style="width:700px">' +
+            '<h2><div>Параметры программы<small>Программа ' + pm.code + ' · изменение открыто</small></div></h2>' +
+            '<div class="mseg">' + MODELS.map(function (m) { return '<button type="button" class="' + (m === pm.model ? 'is-on' : '') + '" data-mset="' + m + '">' + m + '</button>'; }).join('') + '</div>' +
+            '<div class="mtiles">' +
+            '<button class="mtile' + (isChg('m', 'd') ? ' is-chg' : '') + '" type="button" data-mnum="d"><label>Диаметр трубы</label><b>' + f1(pm.d) + NB + '<small>мм</small></b></button>' +
+            '<button class="mtile' + (isChg('m', 't') ? ' is-chg' : '') + '" type="button" data-mnum="t"><label>Толщина трубы</label><b>' + f2(pm.t) + NB + '<small>мм</small></b></button>' +
+            '</div>' +
+            '<div class="kp-act"><button class="bt bt--ghost" type="button" data-relock>Закрыть изменение</button><button class="bt bt--blue" type="button" data-close>Готово</button></div></div>';
+        }
+        if (S.sheet === 'leave') {
+          var nl = chgCount();
+          return '<div class="sheet" role="dialog" style="width:560px">' +
+            '<h2><div>Сохранить изменения?<small>' + nl + ' ' + plural(nl, 'параметр изменён', 'параметра изменены', 'параметров изменено') + ' в' + NB + 'программе ' + edProg().code + '</small></div></h2>' +
+            '<div class="kp-act"><button class="bt bt--ghost" type="button" data-eleave>Не сохранять</button><button class="bt bt--green" type="button" data-esave-leave>Сохранить</button></div></div>';
+        }
+        return '';
+      }
+      function openSheet(name) {
+        var fresh = !veil;
+        S.sheet = name;
+        if (!veil) {
+          veil = document.createElement('div');
+          veil.className = 'sheet-veil';
+          screen.appendChild(veil);
+          veil.addEventListener('click', onSheetClick);
+          veil.addEventListener('pointerdown', function (e) {
+            var b = e.target.closest('.sheet-done, .bt'); if (!b) return;
+            b.classList.add('is-pressed');
+            var up = function () { b.classList.remove('is-pressed'); document.removeEventListener('pointerup', up); };
+            document.addEventListener('pointerup', up);
+          });
+        }
+        veil.innerHTML = sheetHTML();
+        if (!fresh) { veil.style.animation = 'none'; var sh = veil.querySelector('.sheet'); if (sh) sh.style.animation = 'none'; }
+        veil.querySelectorAll('.sheet-done, .bt--green, .bt--blue').forEach(addRipple);
+      }
+      function closeSheet() {
+        if (S.sheet === 'keypad' && S.kp && S.kp.back) { var back = S.kp.back; S.kp = null; openSheet(back); return; }
+        S.sheet = null; S.kp = null;
+        if (veil) { veil.remove(); veil = null; }
+      }
+      function onSheetClick(e) {
+        var t;
+        if (S.sheet === 'funcs' && (t = e.target.closest('[data-toggle]'))) {
+          var c = prog().common, k = t.dataset.toggle;
+          c[k] = !c[k];
+          var on = t.querySelector('.switch').classList.toggle('is-on', c[k]);
+          t.classList.toggle('is-on', on);
+          t.setAttribute('aria-pressed', on);
+          if (panelMode === 'ready') renderPanel();       // «таблетки» обновляются сразу
+          note(COM[k].l + ': ' + (c[k] ? 'ВКЛ' : 'ВЫКЛ') + ' — сохранено в' + NBSP + 'программе ' + prog().code);
+          return;
+        }
+        if ((t = e.target.closest('[data-key-in]'))) { kpKey(t.dataset.keyIn); return; }
+        if ((t = e.target.closest('[data-kp]'))) { kpApply(t.dataset.kp === 'all'); return; }
+        if ((t = e.target.closest('[data-mset]'))) {
+          var p = edProg(), was = headOf(p.model), id = t.dataset.mset;
+          p.model = id;
+          if (headOf(id) !== was) note(id + ': ' + (headOf(id) === 'open' ? 'открытая' : 'закрытая') + ' головка — набор параметров изменится');
+          openSheet('model'); renderScreen(); return;
+        }
+        if ((t = e.target.closest('[data-mnum]'))) {
+          var pp = edProg(), isD = t.dataset.mnum === 'd';
+          openKeypad({ kind: 'm', key: t.dataset.mnum, title: isD ? 'Диаметр трубы' : 'Толщина трубы', sub: 'Программа ' + pp.code, u: 'мм', min: isD ? 6 : 0.5, max: isD ? 300 : 20, dec: isD ? 1 : 2, cur: pp[t.dataset.mnum] });
+          return;
+        }
+        if (e.target.closest('[data-relock]')) { S.ed.unlocked = false; closeSheet(); renderScreen(); note('Изменение закрыто'); return; }
+        if (e.target.closest('[data-esave-leave]')) { saveEditor(); closeSheet(); S.ed = null; setScreen('programs'); return; }
+        if (e.target.closest('[data-eleave]')) { closeSheet(); S.ed = null; setScreen('programs'); note('Изменения не сохранены'); return; }
+        // крестик/«Готово»/мимо листа (у окна «Сохранить изменения?» мимо — не закрывает)
+        if (e.target.closest('[data-close]') || (e.target === veil && S.sheet !== 'leave')) closeSheet();
+      }
+      function kpKey(x) {
+        var k = S.kp;
+        if (x === '⌫') k.buf = k.buf.slice(0, -1);
+        else if (x === 'Сброс') k.buf = '';
+        else if (x === '±') k.buf = k.buf.charAt(0) === '-' ? k.buf.slice(1) : (k.buf ? '-' + k.buf : '-');
+        else { if (k.fresh) k.buf = ''; if (x === '.' && k.buf.indexOf('.') >= 0) return; if (k.buf.length < 8) k.buf += x; }
+        k.fresh = false;
+        openSheet('keypad');
+      }
+      function kpApply(all) {
+        var k = S.kp, v = parseFloat(k.buf), p = edProg(), r = Math.round(v * Math.pow(10, k.dec)) / Math.pow(10, k.dec);
+        if (k.kind === 's') { if (all) p.sec[k.key] = p.sec[k.key].map(function () { return r; }); else p.sec[k.key][k.i] = r; }
+        else if (k.kind === 'm') p[k.key] = r;
+        else { p.common[k.key] = r; if (k.key === 'sectors') resizeSectors(p, r); }
+        var back = k.back;
+        S.kp = null;
+        if (back) openSheet(back); else closeSheet();
+        renderScreen();
+      }
+
+      // ================= Режим ожидания =================
+      var sbEl = null;
+      function openStandby() {
+        S.standby = true;
+        sbEl = document.createElement('div');
+        sbEl.className = 'standby';
+        sbEl.innerHTML = '<div class="sb-ring"><div class="sb-fill" id="sb-fill"></div><div class="sb-face">' + svg('moon') + 'Ожидание</div></div>' +
+          '<div class="sb-txt"><b>Режим ожидания</b><span>Коснитесь экрана, чтобы продолжить</span></div>';
+        screen.appendChild(sbEl);
+        sbEl.addEventListener('click', closeStandby);
+        var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var t0 = performance.now(), T_WELD = 9000, T_PURGE = 1800, T_RESET = 700, T_ALL = T_WELD + T_PURGE + T_RESET;
+        (function loop(now) {
+          if (!S.standby) return;
+          var f = $('sb-fill'); if (!f) return;
+          var tc = still ? T_WELD * 0.58 : (now - t0) % T_ALL, bg, op = 1;
+          if (tc < T_WELD) {          // лава заполняет кольцо
+            var a = tc / T_WELD * 360;
+            bg = 'conic-gradient(#F21500 0deg, #FF5A00 ' + (a * 0.55) + 'deg, #FFC000 ' + (a * 0.9) + 'deg, #FFE81A ' + a + 'deg, transparent ' + a + 'deg)';
+          } else {                    // синяя продувка, затем гаснет
+            bg = 'linear-gradient(45deg, #0650C8, #0A7FE0, #3DB0F2)';
+            if (tc > T_WELD + T_PURGE) op = 1 - (tc - T_WELD - T_PURGE) / T_RESET;
+          }
+          f.style.background = bg; f.style.opacity = op.toFixed(2);
+          if (!still) requestAnimationFrame(loop);
+        })(t0);
+      }
+      function closeStandby() { S.standby = false; if (sbEl) { sbEl.remove(); sbEl = null; } }
+
+      // ================= Действия по нажатию =================
+      function act(a, el) {
+        var busy = RUNNING.indexOf(S.phase) >= 0;
+        switch (a) {
+          case 'zero': returnZero(); break;
+          case 'test-gas': if (!gasOk()) { note('Нет давления газа'); break; } S.test.gas = S.test.gas > 0 ? 0 : 5; renderScreen(); break;
+          case 'test-water': if (!waterOk()) { note('Нет протока охлаждения'); break; } S.test.water = S.test.water > 0 ? 0 : 5; renderScreen(); break;
+          case 'standby': openStandby(); break;
+          case 'funcs': openSheet('funcs'); break;
+          case 'psel': S.pSel = el.dataset.id; renderScreen(); break;
+          case 'pload': {
+            var p = S.progs.filter(function (x) { return x.id === S.pSel; })[0];
+            S.progId = p.id; S.torch = 0; S.corr = { cur: 0, arc: 0, osc: 0, wire: 0, spd: 0 };
+            go('ready'); renderScreen();
+            note('Загружена программа ' + p.code + ' ' + p.model);
+            break;
+          }
+          case 'edit': openEditor(S.pSel); break;
+          case 'etab': S.ed.tab = el.dataset.id; renderScreen(); break;
+          case 'esec': S.ed.sec = +el.dataset.id; renderScreen(); break;
+          case 'ecell': editorTap(el.dataset.k, el.dataset.key, +el.dataset.i, el); break;
+          case 'ediscard': S.ed.draft = clone(S.progs.filter(function (x) { return x.id === S.ed.id; })[0]); renderScreen(); note('Изменения отменены'); break;
+          case 'esave': saveEditor(); renderScreen(); break;
+        }
+      }
+      alt.addEventListener('click', function (e) {
+        var el = e.target.closest('[data-a]'); if (!el) return;
+        act(el.dataset.a, el);
+      });
+      $('status-zero').addEventListener('click', returnZero);
+
+      // Кнопка «Назад»
+      $('back-button').addEventListener('click', function () {
+        if (S.screen === 'manual' || S.screen === 'programs') { setScreen('weld'); return; }
+        if (S.screen === 'editor') { if (chgCount()) openSheet('leave'); else { S.ed = null; setScreen('programs'); } return; }
+        note('«Сварка» — главный экран аппарата');
+      });
+      // Индикаторы газа и воды
+      $('gas-indicator').addEventListener('click', function () {
+        note(gasOk() ? 'Газ (аргон): давление 4,2' + NBSP + 'бар — норма' : 'Газ: давление 0' + NBSP + 'бар — откройте баллон');
+      });
+      $('water-indicator').addEventListener('click', function () {
+        note(waterOk() ? 'Охлаждение: проток в' + NBSP + 'норме' : 'Охлаждение: нет протока — проверьте насос');
+      });
+      // Кнопка программы → место сохранения
+      $('program-button').addEventListener('click', function () {
+        if (RUNNING.indexOf(S.phase) >= 0) { note('Программу нельзя менять во время сварки'); return; }
+        S.pSel = S.progId; setScreen('programs');
+      });
+      // Шестерёнка: на главном экране — ручной режим; в редакторе — открывает изменение программы
+      settingsBtn.addEventListener('click', function () {
+        if (S.screen === 'editor') {
+          if (!S.ed.unlocked) {
+            S.ed.unlocked = true; renderScreen();
+            note('Изменение открыто: модель и труба — здесь, параметры секторов — в таблице');
+          }
+          openSheet('model'); return;
+        }
+        if (S.screen !== 'weld') return;
+        if (['ready', 'done', 'aborted'].indexOf(S.phase) < 0) return;
+        if (S.phase !== 'ready') { S.torch = S.phase === 'done' ? 0 : S.stopAngle; go('ready'); }
+        setScreen('manual');
+      });
+
+      // Большие кнопки главного экрана
+      startBtn.addEventListener('hold-confirm', startWeld);
+      startBtn.addEventListener('hold-cancel', function () { note('Удерживайте СТАРТ 1' + NBSP + 'секунду — защита от' + NBSP + 'случайного запуска'); });
+      startBtn.addEventListener('hold-denied', function () {
+        note(!gasOk() ? 'Нет давления газа: проверьте баллон и' + NBSP + 'редуктор' : !waterOk() ? 'Нет протока охлаждения: проверьте контур'
+          : 'Горелка не в' + NBSP + 'нуле: нажмите «В ноль» или верните её в' + NBSP + 'ручном режиме');
+      });
+      $('stop-button').addEventListener('click', stopNow);
+      smooth.addEventListener('click', smoothStop);
+      returnBtn.addEventListener('click', function () { if (S.phase === 'aborted') returnZero(); });
+      $('done-button').addEventListener('click', function () {
+        if (S.phase === 'done') { S.torch = 0; go('ready'); }
+      });
+
+      // Нажатое состояние: чуть темнее, пока палец на кнопке
+      document.querySelectorAll('.weld-btn, .done-button').forEach(function (btn) {
+        function press() { btn.classList.add('is-pressed'); }
+        function release() { btn.classList.remove('is-pressed'); }
+        btn.addEventListener('pointerdown', press);
+        btn.addEventListener('pointerup', release);
+        btn.addEventListener('pointerleave', release);
+        btn.addEventListener('pointercancel', release);
+      });
+
+      // Волна от места касания на больших цветных кнопках (кроме «СТАРТ» — там полоса удержания)
+      document.querySelectorAll('.weld-btn, .done-button').forEach(addRipple);
+      function addRipple(btn) {
+        if (btn.dataset.ripple) return;
+        btn.dataset.ripple = '1';
+        btn.addEventListener('pointerdown', function (e) {
+          var r = btn.getBoundingClientRect();
+          var k = r.width / btn.offsetWidth;            // экран может быть уменьшен под окно
+          var dot = document.createElement('span');
+          dot.className = 'ripple';
+          dot.style.left = (e.clientX - r.left) / k + 'px';
+          dot.style.top = (e.clientY - r.top) / k + 'px';
+          btn.appendChild(dot);
+          dot.addEventListener('animationend', function () { dot.remove(); });
+        });
+      }
+
+      // ================= Панель презентера =================
+      $('deck').addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        if (b.dataset.head && b.dataset.head !== headOf(prog().model)) {
+          var keep = { speed: S.speed, scn: S.scn, screen: S.screen === 'manual' ? 'manual' : 'weld' };
+          closeSheet(); closeStandby();
+          S = freshState(b.dataset.head); Object.assign(S, keep); window.weldSim = S;
+          go('ready'); renderScreen();
+        }
+        if (b.dataset.speed) { S.speed = +b.dataset.speed; syncHeader(); }
+        if (b.dataset.scn) { S.scn = b.dataset.scn; syncHeader(); if (S.screen === 'manual') renderScreen(); }
+        if (b.id === 'deck-reset') {
+          var sp = S.speed;
+          closeSheet(); closeStandby();
+          S = freshState(headOf(prog().model)); S.speed = sp; window.weldSim = S;
+          go('ready'); renderScreen(); note('Демо сброшено');
+        }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (['h', 'H', 'р', 'Р'].indexOf(e.key) >= 0 && !e.metaKey && !e.ctrlKey) {
+          $('deck').classList.toggle('is-hidden');
+          if (typeof fitDevice === 'function') fitDevice();
+        }
+      });
+
+      go('ready');
+      renderScreen();
+      requestAnimationFrame(tick);
+      window.weldSim = S;   // для проверки
+    })();
+  </script>
+</body>
+</html>
